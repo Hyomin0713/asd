@@ -708,20 +708,8 @@ export default function Page() {
 
   const shell: React.CSSProperties = {
     minHeight: "100vh",
-    display: "grid",
-    gridTemplateColumns: "260px 1fr minmax(360px, 440px)",
-    gridTemplateRows: "72px 1fr 140px",
-    gap: 14,
-    padding: 14,
     boxSizing: "border-box",
   };
-
-
-
-
-
-
-
 
   const card: React.CSSProperties = {
     background: "rgba(255,255,255,0.06)",
@@ -853,10 +841,11 @@ export default function Page() {
     marginBottom: 12,
   };
   return (
-    <div style={shell}>
+    <div className="shell" style={shell}>
       <ToastBanner toast={toast} onClose={() => setToast(null)} />
 
       <DiscordAside
+        className="discord-aside"
         isLoggedIn={isLoggedIn}
         discordName={discordName}
         discordTag={discordTag}
@@ -874,6 +863,7 @@ export default function Page() {
       />
 
       <SearchHeader
+        className="search-header"
         query={query}
         onChangeQuery={setQuery}
         countText={`${filtered.length}개`}
@@ -882,7 +872,7 @@ export default function Page() {
         cardHeader={cardHeader}
       />
 
-            <aside style={{ gridColumn: "3", gridRow: "1 / span 3", display: "flex", flexDirection: "column", gap: 12 }}>
+            <aside className="aside-right" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 <section style={{ ...card, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 360, flex: "0 0 auto", maxHeight: "62vh" }}>
         <div style={{ ...cardHeader, alignItems: "flex-start" }}>
           <div style={{ display: "grid", gap: 2 }}>
@@ -1363,6 +1353,69 @@ export default function Page() {
             </div>
 
             <style>{`
+              .shell {
+                display: grid;
+                grid-template-columns: 260px 1fr 400px;
+                grid-template-rows: 72px 1fr auto;
+                gap: 14px;
+                padding: 14px;
+              }
+              .discord-aside {
+                grid-column: 1;
+                grid-row: 1 / span 3;
+              }
+              .search-header {
+                grid-column: 2;
+                grid-row: 1;
+              }
+              .main-content {
+                grid-column: 2;
+                grid-row: 2;
+                grid-template-columns: 340px 1fr;
+              }
+              .aside-right {
+                grid-column: 3;
+                grid-row: 1 / span 3;
+              }
+              .footer-content {
+                grid-column: 2 / span 2;
+                grid-row: 3;
+              }
+
+              @media (max-width: 1300px) {
+                .shell {
+                  grid-template-columns: 260px 1fr;
+                  grid-template-rows: 72px auto auto auto;
+                }
+                .aside-right {
+                  grid-column: 1 / span 2;
+                  grid-row: 3;
+                }
+                .footer-content {
+                  grid-column: 1 / span 2;
+                  grid-row: 4;
+                }
+              }
+
+              @media (max-width: 1000px) {
+                .main-content {
+                  grid-template-columns: 1fr;
+                }
+              }
+
+              @media (max-width: 768px) {
+                .shell {
+                  grid-template-columns: 1fr;
+                  grid-template-rows: auto auto auto auto auto;
+                  padding: 8px;
+                  gap: 8px;
+                }
+                .discord-aside, .search-header, .main-content, .aside-right, .footer-content {
+                  grid-column: 1 !important;
+                  grid-row: auto !important;
+                }
+              }
+
               @keyframes pulse {
                 0%, 100% { transform: scale(1); opacity: .55; }
                 50% { transform: scale(1.4); opacity: 1; }
@@ -1413,8 +1466,9 @@ export default function Page() {
       </aside>
 
 
-      <main style={{ ...card, gridColumn: "2", gridRow: "2", display: "grid", gridTemplateColumns: "420px 1fr" }}>
+      <main className="main-content" style={{ ...card, display: "grid" }}>
         <GroundCardList
+          className="ground-card-list"
           filtered={filtered}
           selectedId={selected?.id ?? ""}
           onSelectGround={onSelectGround}
@@ -1536,7 +1590,7 @@ export default function Page() {
         </section>
       </main>
 
-      <footer style={{ ...card, background: "rgb(12,16,24)", gridColumn: "2 / span 2", gridRow: "3" }}>
+      <footer className="footer-content" style={{ ...card, background: "rgb(12,16,24)" }}>
         <div style={cardHeader}>
           <div style={{ fontWeight: 800 }}>광고 영역</div>
           <div style={muted}>6번</div>

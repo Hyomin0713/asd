@@ -9,11 +9,12 @@ type Props = {
   muted: React.CSSProperties;
   card: React.CSSProperties;
   cardHeader: React.CSSProperties;
+  className?: string;
 };
 
-export function SearchHeader({ query, onChangeQuery, countText, muted, card, cardHeader }: Props) {
+export function SearchHeader({ query, onChangeQuery, countText, muted, card, cardHeader, className }: Props) {
   return (
-    <header style={{ ...card, gridColumn: "2", gridRow: "1", display: "flex", alignItems: "center" }}>
+    <header className={className} style={{ ...card, gridColumn: "2", gridRow: "1", display: "flex", alignItems: "center" }}>
       <div style={{ ...cardHeader, borderBottom: "none", width: "100%" }}>
         <div style={{ fontWeight: 800 }}>사냥터 검색</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "flex-end" }}>

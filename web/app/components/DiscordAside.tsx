@@ -12,6 +12,7 @@ type Props = {
   muted: React.CSSProperties;
   card: React.CSSProperties;
   cardHeader: React.CSSProperties;
+  className?: string;
 };
 
 export function DiscordAside({
@@ -24,9 +25,11 @@ export function DiscordAside({
   muted,
   card,
   cardHeader,
+  className,
 }: Props) {
   return (
     <aside
+      className={className}
       style={{
         ...card,
         gridColumn: "1",

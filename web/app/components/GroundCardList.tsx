@@ -22,10 +22,11 @@ export function GroundCardList(props: {
   cardHeader: React.CSSProperties;
   muted: React.CSSProperties;
   btn: React.CSSProperties;
+  className?: string;
 }) {
-  const { filtered, selectedId, onSelectGround, isCustomSelected, openNewGround, openEditGround, deleteSelectedGround, cardHeader, muted, btn } = props;
+  const { filtered, selectedId, onSelectGround, isCustomSelected, openNewGround, openEditGround, deleteSelectedGround, cardHeader, muted, btn, className } = props;
   return (
-    <section style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+    <section className={className}>
       <div style={cardHeader}>
         <div style={{ fontWeight: 900 }}>사냥터</div>
 </div>
