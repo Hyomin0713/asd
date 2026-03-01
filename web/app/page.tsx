@@ -908,6 +908,10 @@ export default function Page() {
         isLoggedIn={isLoggedIn}
         discordName={discordName}
         discordTag={discordTag}
+        nickname={nickname}
+        level={level}
+        job={job}
+        power={power}
         onLogin={() => (window.location.href = apiUrl("/auth/discord"))}
         onLogout={async () => {
           try {
@@ -919,6 +923,7 @@ export default function Page() {
         muted={muted}
         card={card}
         cardHeader={cardHeader}
+        fmtNumber={fmtNumber}
       />
 
       <SearchHeader
@@ -932,7 +937,7 @@ export default function Page() {
       />
 
             <aside className="aside-right" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-<section style={{ ...card, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 360, flex: "0 0 auto", maxHeight: "62vh" }}>
+<section style={{ ...card, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 360, flex: "1 1 auto", maxHeight: "88vh" }}>
         <div style={{ ...cardHeader, alignItems: "flex-start" }}>
           <div style={{ display: "grid", gap: 2 }}>
             <div style={{ fontWeight: 800 }}>파티 정보</div>
@@ -952,84 +957,10 @@ export default function Page() {
         </div>
 
         <div style={{ padding: 14, display: "grid", gap: 10, overflowY: "auto", flex: 1, minHeight: 0 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <label style={{ display: "grid", gap: 6 }}>
-              <div style={muted}>레벨</div>
-              <input
-                value={level}
-                onChange={(e) => setLevel(clampInt(e.target.value, 1, 250))}
-                inputMode="numeric"
-                style={{
-                  background: "rgba(0,0,0,0.25)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  color: "#e6e8ee",
-                  outline: "none",
-                }}
-              />
-            </label>
-
-            <label style={{ display: "grid", gap: 6 }}>
-              <div style={muted}>직업</div>
-              <select
-                value={job}
-                onChange={(e) => setJob(e.target.value as Job)}
-                style={{
-                  background: "rgba(0,0,0,0.25)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  color: "#e6e8ee",
-                  outline: "none",
-                }}
-              >
-                <option value="전사">전사</option>
-                <option value="도적">도적</option>
-                <option value="궁수">궁수</option>
-                <option value="마법사">마법사</option>
-              </select>
-            </label>
-          </div>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <div style={muted}>닉네임</div>
-            <input
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="매칭/블랙리스트 기준 닉네임"
-              style={{
-                background: "rgba(0,0,0,0.25)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                borderRadius: 12,
-                padding: "10px 12px",
-                color: "#e6e8ee",
-                outline: "none",
-                minHeight: 44,
-              }}
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <div style={muted}>스공</div>
-            <input
-              value={power}
-              onChange={(e) => setPower(clampInt(e.target.value, 0, 9999999))}
-              inputMode="numeric"
-              style={{
-                background: "rgba(0,0,0,0.25)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                borderRadius: 12,
-                padding: "10px 12px",
-                color: "#e6e8ee",
-                outline: "none",
-              }}
-            />
-          </label>
-
+          
           {/* Party Member List Section - Always visible if in a party */}
-          {party && (
-            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+          {party ? (
+            <div style={{ display: "grid", gap: 10 }}>
               <div style={{ fontWeight: 800, display: "flex", justifyContent: "space-between" }}>
                 <span>파티원 목록</span>
                 <span style={muted}>{party.members?.length ?? 0}/6명</span>
@@ -1062,74 +993,13 @@ export default function Page() {
                 })}
               </div>
             </div>
+          ) : (
+            <div style={{ ...muted, padding: "40px 10px", textAlign: "center" }}>
+              참가 중인 파티가 없습니다.<br/>매칭을 시작하거나 파티를 만들어보세요.
+            </div>
           )}
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-              <div style={{ fontWeight: 800 }}>블랙리스트</div>
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                value={blackInput}
-                onChange={(e) => setBlackInput(e.target.value)}
-                placeholder="닉네임/ID 추가"
-                style={{
-                  flex: 1,
-                  background: "rgba(0,0,0,0.25)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  color: "#e6e8ee",
-                  outline: "none",
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") addBlacklist();
-                }}
-              />
-              <button
-                onClick={addBlacklist}
-                style={{
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#e6e8ee",
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  cursor: "pointer",
-                  fontWeight: 800,
-                }}
-              >
-                추가
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {blacklist.length === 0 ? (
-                <div style={muted}>없음</div>
-              ) : (
-                blacklist.map((b) => (
-                  <button
-                    key={b}
-                    onClick={() => removeBlacklist(b)}
-                    title="클릭해서 제거"
-                    style={{
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "rgba(255,80,80,0.10)",
-                      color: "#e6e8ee",
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      cursor: "pointer",
-                      fontSize: 13,
-                    }}
-                  >
-                    {b} ✕
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ display: "grid", gap: 8, marginTop: "auto" }}>
             <div style={{ fontWeight: 800 }}>매칭 상태</div>
 
             {matchState === "searching" && (
@@ -1188,31 +1058,6 @@ export default function Page() {
               <div style={{ display: "grid", gap: 12 }}>
                 <div style={{ fontWeight: 900, fontSize: 16 }}>매칭완료!</div>
                 
-                {/* Matched Party Members Info */}
-                <div style={{ display: "grid", gap: 8 }}>
-                  {(party?.members || []).map((m: any) => {
-                    const isOwner = party?.ownerId === m.userId;
-                    const jobColor = 
-                      m.job === "전사" ? "#ff6b6b" :
-                      m.job === "도적" ? "#cc5de8" :
-                      m.job === "궁수" ? "#51cf66" :
-                      m.job === "마법사" ? "#339af0" : "#e6e8ee";
-
-                    return (
-                      <div key={m.userId || m.id} style={{ ...listCard, padding: '10px', borderLeft: `4px solid ${jobColor}` }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {isOwner && <span title="파티장">👑</span>}
-                            <span>{m.name || m.displayName}</span>
-                          </div>
-                          <div style={{ ...muted, color: jobColor, fontWeight: 700 }}>Lv.{m.level} {m.job}</div>
-                        </div>
-                        <div style={{ ...muted, marginTop: 4 }}>스공: {fmtNumber(m.power)}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-
                 {channel ? (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <div style={{ ...chip, background: "rgba(120,200,255,0.12)", borderColor: "rgba(120,200,255,0.32)" }}>채널</div>
@@ -1282,10 +1127,6 @@ export default function Page() {
                       value={joinPassword}
                       onChange={(e) => setJoinPassword(e.target.value)}
                     />
-
-                    <div style={{ ...muted, fontSize: 12 }}>
-                      • 파티장의 코드 또는 비밀번호가 필요해요.
-                    </div>
                   </div>
                 </div>
 
@@ -1346,7 +1187,6 @@ export default function Page() {
                         채널 확정
                       </button>
                     </div>
-                    <div style={{ ...muted }}>파티장은 게임 내 채널을 선택해 주세요.</div>
                   </div>
                 ) : (
                   <div style={{ ...muted, fontWeight: 700 }}>파티장이 채널을 설정중입니다…</div>
@@ -1417,11 +1257,315 @@ export default function Page() {
                   const etaMin = typeof eta === "number" && eta > 0 ? Math.max(1, Math.round(eta / 60000)) : 0;
                   const etaText = etaMin ? ` · 예상 ${etaMin}분` : "";
                   return n >= 2
-                    ? `찾는 중… (현재 ${n}명${etaText}) 마음이 바뀌면 ‘큐 취소’ 가능.`
+                    ? `찾는 중… (현재 ${n}명${etaText})`
                     : `대기 인원이 부족합니다. (현재 ${n}명)`;
                 })()}
-              {matchState === "matched" && "채널 확인 후, 필요하면 ‘다시 매칭’도 가능."}
             </div>
+          </div>
+        </div>
+      </section>
+
+        <div style={{ ...card, background: "rgb(12,16,24)", flex: "0 0 auto", minHeight: 180, display: "flex", flexDirection: "column" }}>
+                <div style={cardHeader}>
+                  <div style={{ fontWeight: 800 }}>광고 영역</div>
+                  <div style={muted}>5번</div>
+                </div>
+                <div style={{ padding: 14, flex: 1, minHeight: 0 }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 14,
+                      border: "1px dashed rgba(255,255,255,0.18)",
+                      background: "rgb(10,14,22)",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "rgba(230,232,238,0.65)",
+                      textAlign: "center",
+                      padding: 14,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 900, marginBottom: 6 }}>AD</div>
+                      <div style={muted}>여기에 광고/후원 배너</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+      </aside>
+
+
+      <main className="main-content" style={{ ...card, display: "grid" }}>
+        <GroundCardList
+          className="ground-card-list"
+          filtered={filtered}
+          selectedId={selected?.id ?? ""}
+          onSelectGround={onSelectGround}
+          isCustomSelected={isCustomSelected}
+          openNewGround={openNewGround}
+          openEditGround={openEditGround}
+          deleteSelectedGround={deleteSelectedGround}
+          cardHeader={cardHeader}
+          muted={muted}
+          btn={btn}
+          queueCounts={queueCounts}
+        />
+
+        <section>
+          <div style={cardHeader}>
+            <div style={{ fontWeight: 900 }}>{selected?.name ?? "사냥터 선택"}</div>
+            <div style={muted}>{selected?.recommendedLevel ?? ""}</div>
+          </div>
+
+          <div style={{ padding: 14, display: "grid", gap: 12 }}>
+            <div style={{ ...card, background: "rgba(0,0,0,0.20)" }}>
+              <div style={{ padding: 14, display: "grid", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 900 }}>정보</div>
+                    <div style={muted}>{selected?.area ?? ""}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: 900 }}>현재 큐</div>
+                    <div style={muted}>{(queueCounts[selected?.id ?? ""] ?? 0)}명</div>
+                  </div>
+                </div>
+
+                <div style={{ ...muted, lineHeight: 1.5 }}>{selected?.note ?? ""}</div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                  {(selected?.tags ?? []).map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        fontSize: 13,
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        background: "rgba(120,200,255,0.08)",
+                        border: "1px solid rgba(120,200,255,0.18)",
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <PublicPartyPanel
+              selectedName={selected?.name ?? null}
+              selectedId={selected?.id ?? null}
+              myPartyId={partyId || null}
+              parties={(selected?.name ? partiesForSelected : partyList) as any[]}
+              onRefresh={refreshParties}
+              onJoin={joinFromList}
+              isJoining={isJoining}
+              card={card}
+              muted={muted}
+              btnSm={btnSm}
+              listCard={listCard}
+              pill={pill}
+            />
+
+            <div className="main-panels" style={{ display: "grid", gap: 12 }}>
+              {partyId && (
+                <BuffTable
+                  partyId={partyId}
+                  party={party}
+                  me={me}
+                  myBuffs={myBuffs}
+                  onChangeMyBuffs={setMyBuffs}
+                  onPushMyBuffs={pushMyBuffs}
+                  onTransferOwner={transferOwner}
+                  fmtNumber={fmtNumber}
+                  card={card}
+                  muted={muted}
+                  chip={chip}
+                  input={input}
+                />
+              )}
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              <button
+                onClick={() => startMatching()}
+                style={{
+                  flex: 1,
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "rgba(120,200,255,0.14)",
+                  color: "#e6e8ee",
+                  padding: "12px 12px",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                이 사냥터로 큐 참가
+              </button>
+              <button
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    setToast({ type: "err", msg: "디스코드 로그인이 필요합니다." });
+                    return;
+                  }
+                  setCreatePartyOpen(true);
+                }}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#e6e8ee",
+                  padding: "12px 12px",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                파티 만들기
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer-content" style={{ ...card, background: "rgb(12,16,24)" }}>
+        <div style={cardHeader}>
+          <div style={{ fontWeight: 800 }}>광고 영역</div>
+          <div style={muted}>6번</div>
+        </div>
+        <div style={{ padding: 14, flex: 1, minHeight: 0 }}>
+          <div
+            style={{
+              height: 72,
+              borderRadius: 14,
+              border: "1px dashed rgba(255,255,255,0.18)",
+              background: "rgb(10,14,22)",
+              display: "grid",
+              placeItems: "center",
+              color: "rgba(230,232,238,0.65)",
+            }}
+          >
+            하단 배너 자리
+          </div>
+        </div>
+      </footer>
+
+      {settingsOpen ? (
+        <div
+          onClick={() => setSettingsOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.60)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 90,
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(520px, 96vw)",
+              borderRadius: 16,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(18,18,22,0.98)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontWeight: 900, fontSize: 16 }}>프로필 및 블랙리스트 설정</div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: 12,
+                marginTop: 12,
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ ...formRow }}>
+                <div style={label}>닉네임</div>
+                <input
+                  style={input}
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="게임 내 닉네임"
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={formRow}>
+                  <div style={label}>레벨</div>
+                  <input
+                    style={input}
+                    value={String(level)}
+                    inputMode="numeric"
+                    onChange={(e) => setLevel(clampInt(e.target.value, 1, 300))}
+                    placeholder="1~300"
+                  />
+                </div>
+
+                <div style={formRow}>
+                  <div style={label}>직업</div>
+                  <select style={input} value={job} onChange={(e) => setJob(e.target.value as Job)}>
+                    <option value="전사">전사</option>
+                    <option value="도적">도적</option>
+                    <option value="궁수">궁수</option>
+                    <option value="마법사">마법사</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ ...formRow }}>
+                <div style={label}>스공</div>
+                <input
+                  style={input}
+                  value={String(power)}
+                  inputMode="numeric"
+                  onChange={(e) => setPower(clampInt(e.target.value, 0, 9_999_999))}
+                  placeholder="0~9,999,999"
+                />
+              </div>
+
+              <div style={{ ...formRow, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                  <div style={label}>블랙리스트 관리</div>
+                  <div style={{ ...muted, fontSize: 11 }}>상호 블랙 시 매칭 제외</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={blackInput}
+                    onChange={(e) => setBlackInput(e.target.value)}
+                    placeholder="닉네임 추가"
+                    style={{ ...input, flex: 1 }}
+                    onKeyDown={(e) => { if (e.key === "Enter") addBlacklist(); }}
+                  />
+                  <button onClick={addBlacklist} style={btnSm}>추가</button>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  {blacklist.map((b) => (
+                    <button key={b} onClick={() => removeBlacklist(b)} style={{ ...chip, background: "rgba(255,80,80,0.1)", cursor: "pointer" }}>
+                      {b} ✕
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
+              <button style={btn} onClick={() => setSettingsOpen(false)}>닫기</button>
+              <button style={{ ...btnPrimary, padding: "10px 14px" }} onClick={() => {
+                emitProfile(socketRef.current);
+                setToast({ type: "ok", msg: "저장되었습니다." });
+                setSettingsOpen(false);
+              }}>저장</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
             <style>{`
               .shell {
