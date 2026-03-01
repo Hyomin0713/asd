@@ -22,9 +22,10 @@ export function GroundCardList(props: {
   cardHeader: React.CSSProperties;
   muted: React.CSSProperties;
   btn: React.CSSProperties;
+  queueCounts: Record<string, number>;
   className?: string;
 }) {
-  const { filtered, selectedId, onSelectGround, isCustomSelected, openNewGround, openEditGround, deleteSelectedGround, cardHeader, muted, btn, className } = props;
+  const { filtered, selectedId, onSelectGround, isCustomSelected, openNewGround, openEditGround, deleteSelectedGround, cardHeader, muted, btn, queueCounts, className } = props;
   return (
     <section className={className}>
       <div style={cardHeader}>
@@ -33,6 +34,7 @@ export function GroundCardList(props: {
       <div style={{ padding: 12, display: "grid", gap: 10 }}>
         {filtered.map((g) => {
           const active = g.id === selectedId;
+          const waitCount = queueCounts[g.id] || 0;
           return (
             <button
               key={g.id}
@@ -45,8 +47,28 @@ export function GroundCardList(props: {
                 padding: 12,
                 cursor: "pointer",
                 color: "#e6e8ee",
+                position: "relative",
               }}
             >
+              {waitCount > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    right: -6,
+                    background: "#ff6b6b",
+                    color: "white",
+                    borderRadius: 999,
+                    padding: "2px 8px",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    boxShadow: "0 2px 8px rgba(255,107,107,0.4)",
+                    zIndex: 2,
+                  }}
+                >
+                  {waitCount}명 대기
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ fontWeight: 900 }}>{g.name}</div>
                 <div style={{ ...muted, whiteSpace: "nowrap" }}>{g.recommendedLevel}</div>

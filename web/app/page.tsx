@@ -1153,15 +1153,27 @@ export default function Page() {
                 
                 {/* Matched Party Members Info */}
                 <div style={{ display: "grid", gap: 8 }}>
-                  {(party?.members || []).map((m: any) => (
-                    <div key={m.userId || m.id} style={{ ...listCard, padding: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontWeight: 800 }}>{m.name || m.displayName}</div>
-                        <div style={muted}>Lv.{m.level} {m.job}</div>
+                  {(party?.members || []).map((m: any) => {
+                    const isOwner = party?.ownerId === m.userId;
+                    const jobColor = 
+                      m.job === "전사" ? "#ff6b6b" :
+                      m.job === "도적" ? "#cc5de8" :
+                      m.job === "궁수" ? "#51cf66" :
+                      m.job === "마법사" ? "#339af0" : "#e6e8ee";
+
+                    return (
+                      <div key={m.userId || m.id} style={{ ...listCard, padding: '10px', borderLeft: `4px solid ${jobColor}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {isOwner && <span title="파티장">👑</span>}
+                            <span>{m.name || m.displayName}</span>
+                          </div>
+                          <div style={{ ...muted, color: jobColor, fontWeight: 700 }}>Lv.{m.level} {m.job}</div>
+                        </div>
+                        <div style={{ ...muted, marginTop: 4 }}>스공: {fmtNumber(m.power)}</div>
                       </div>
-                      <div style={{ ...muted, marginTop: 4 }}>스공: {fmtNumber(m.power)}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {channel ? (
@@ -1545,6 +1557,7 @@ export default function Page() {
           cardHeader={cardHeader}
           muted={muted}
           btn={btn}
+          queueCounts={queueCounts}
         />
 
         <section>
