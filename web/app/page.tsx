@@ -157,6 +157,13 @@ export default function Page() {
   const [job, setJob] = useState<Job>("전사");
   const [power, setPower] = useState(12000);
   const [isCaptain, setIsCaptain] = useState(false);
+  const canBeCaptain = job === "궁수" && level >= 120;
+
+  useEffect(() => {
+    if (isCaptain && !canBeCaptain) {
+      setIsCaptain(false);
+    }
+  }, [job, level, isCaptain, canBeCaptain]);
 
   useEffect(() => {
     const saved = safeLocalGet("mlq.profile", null as any);
@@ -196,6 +203,8 @@ export default function Page() {
   const [createPassword, setCreatePassword] = useState("");
 
   const [partyList, setPartyList] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<{ sender: string; msg: string; time: number }[]>([]);
+  const [chatInput, setChatInput] = useState("");
 
   const normalizeKey = (s: any) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 
@@ -326,6 +335,14 @@ export default function Page() {
     safeLocalSet("mlq.queueForm", { level, job, power, nickname, blacklist });
   }, [level, job, power, nickname, blacklist]);
 
+  const sendChat = () => {
+    const sck = socketRef.current;
+    if (!sck || !partyId || !chatInput.trim()) return;
+    const msgData = { partyId, sender: nickname || discordName, msg: chatInput.trim() };
+    sck.emit("party:sendChat", msgData);
+    setChatInput("");
+  };
+
   useEffect(() => {
     const sck = io({
       withCredentials: true,
@@ -351,6 +368,12 @@ export default function Page() {
     sck.on("partyUpdated", (payload: any) => {
       if (!payload?.party) return;
       setParty(payload.party);
+    });
+
+    sck.on("party:message", (payload: any) => {
+      if (payload?.sender && payload?.msg) {
+        setChatMessages(prev => [...prev, { sender: payload.sender, msg: payload.msg, time: Date.now() }].slice(-50));
+      }
     });
 
     sck.on("partiesUpdated", (payload: any) => {
@@ -781,26 +804,53 @@ export default function Page() {
                       <button onClick={() => { if (tryCopy(channel)) setToast({ type: "ok", msg: "복사 완료" }); }} style={btnSm}>복사</button>
                     </div>
                   ) : <div style={{ ...muted, fontSize: 11 }}>채널 대기 중...</div>}
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input style={{ ...input, flex: 1, padding: "6px 8px" }} placeholder="코드" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-                      <button style={btnSm} onClick={joinPartyByCode}>입장</button>
-                    </div>
-                  </div>
-                  {isLeader && !channelReady && (
-                    <div style={{ display: "grid", gap: 6 }}>
-                      <div style={{ fontWeight: 800, fontSize: 12 }}>채널 설정</div>
+                  
+                  {isLeader && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 6 }}>
+                      <div style={{ fontWeight: 800, fontSize: 12 }}>채널 설정 (파티장 전용)</div>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <select value={channelLetter} onChange={(e) => setChannelLetter(e.target.value)} style={{ ...input, padding: "4px" }}>
+                        <select value={channelLetter} onChange={(e) => setChannelLetter(e.target.value)} style={{ ...input, padding: "4px", flex: 1 }}>
                           {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
-                        <select value={channelNum} onChange={(e) => setChannelNum(e.target.value)} style={{ ...input, padding: "4px" }}>
+                        <select value={channelNum} onChange={(e) => setChannelNum(e.target.value)} style={{ ...input, padding: "4px", flex: 1 }}>
                           {Array.from({ length: 999 }, (_, i) => String(i+1).padStart(3, '0')).map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
                         <button onClick={setChannelByLeader} style={{ ...btnPrimary, padding: "4px 8px" }}>확정</button>
                       </div>
                     </div>
                   )}
+
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input style={{ ...input, flex: 1, padding: "6px 8px" }} placeholder="코드" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                      <button style={btnSm} onClick={joinPartyByCode}>입장</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {partyId && (
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)" }}>파티 채팅</div>
+                  <div style={{ height: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, paddingRight: 4 }}>
+                    {chatMessages.length === 0 && <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>}
+                    {chatMessages.map((c, i) => (
+                      <div key={i} style={{ fontSize: 12, lineHeight: 1.4 }}>
+                        <span style={{ fontWeight: 800, color: "#74c0fc" }}>{c.sender}: </span>
+                        <span>{c.msg}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                    <input 
+                      style={{ ...input, padding: "6px", fontSize: "12px", flex: 1 }} 
+                      value={chatInput} 
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && sendChat()}
+                      placeholder="메시지 입력..."
+                    />
+                    <button onClick={sendChat} style={{ ...btnPrimary, padding: "4px 8px" }}>전송</button>
+                  </div>
                 </div>
               )}
 
@@ -907,9 +957,18 @@ export default function Page() {
                 <div style={formRow}><div style={label}>직업</div><select style={input} value={job} onChange={(e) => setJob(e.target.value as Job)}><option value="전사">전사</option><option value="도적">도적</option><option value="궁수">궁수</option><option value="마법사">마법사</option></select></div>
               </div>
               <div style={formRow}><div style={label}>스공</div><input style={input} value={String(power)} onChange={(e) => setPower(clampInt(e.target.value, 0, 9999999))} /></div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <input type="checkbox" checked={isCaptain} onChange={e => setIsCaptain(e.target.checked)} style={{ width: 16, height: 16, cursor: "pointer" }} />
-                <div style={{ fontSize: 13, fontWeight: 700 }}>선장님이신가요? (위바협2 전용)</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, opacity: canBeCaptain ? 1 : 0.5 }}>
+                <input 
+                  type="checkbox" 
+                  checked={isCaptain} 
+                  disabled={!canBeCaptain}
+                  onChange={e => setIsCaptain(e.target.checked)} 
+                  style={{ width: 16, height: 16, cursor: canBeCaptain ? "pointer" : "not-allowed" }} 
+                />
+                <div style={{ display: "grid", gap: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>선장님이신가요? (위바협2 전용)</div>
+                  {!canBeCaptain && <div style={{ fontSize: 10, color: "#ff8787" }}>궁수 직업, 120레벨 이상만 가능합니다.</div>}
+                </div>
               </div>
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8 }}>
                 <div style={label}>블랙리스트</div>
