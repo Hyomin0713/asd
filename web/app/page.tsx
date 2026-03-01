@@ -638,19 +638,19 @@ export default function Page() {
   }
 
   const shell: React.CSSProperties = { minHeight: "100vh", boxSizing: "border-box" };
-  const card: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.35)", overflow: "hidden" };
-  const cardHeader: React.CSSProperties = { padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 };
-  const muted: React.CSSProperties = { color: "rgba(230,232,238,0.7)", fontSize: 12 };
-  const chip: React.CSSProperties = { fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "rgba(230,232,238,0.92)", fontWeight: 800, letterSpacing: 0.2, display: "inline-flex", alignItems: "center", lineHeight: 1 };
-  const input: React.CSSProperties = { width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.22)", color: "rgba(245,246,250,0.95)", outline: "none", fontSize: 13, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)" };
-  const formRow: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, minWidth: 0 };
-  const label: React.CSSProperties = { fontSize: 12, color: "rgba(230,232,238,0.75)", marginBottom: 6 };
-  const btn: React.CSSProperties = { border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#e6e8ee", padding: "8px 10px", borderRadius: 12, cursor: "pointer", fontWeight: 900, fontSize: 13 };
-  const btnSmall: React.CSSProperties = { ...btn, padding: "8px 10px", fontSize: 13, fontWeight: 850 };
+  const card: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", overflow: "hidden" };
+  const cardHeader: React.CSSProperties = { padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 };
+  const muted: React.CSSProperties = { color: "rgba(230,232,238,0.7)", fontSize: 11 };
+  const chip: React.CSSProperties = { fontSize: 11, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "rgba(230,232,238,0.92)", fontWeight: 800, letterSpacing: 0.1, display: "inline-flex", alignItems: "center", lineHeight: 1 };
+  const input: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.22)", color: "rgba(245,246,250,0.95)", outline: "none", fontSize: 13 };
+  const formRow: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, minWidth: 0 };
+  const label: React.CSSProperties = { fontSize: 11, color: "rgba(230,232,238,0.75)", marginBottom: 4 };
+  const btn: React.CSSProperties = { border: "1px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#e6e8ee", padding: "6px 10px", borderRadius: 10, cursor: "pointer", fontWeight: 800, fontSize: 12 };
+  const btnSmall: React.CSSProperties = { ...btn, padding: "6px 8px", fontSize: 12 };
   const btnSm: React.CSSProperties = btnSmall;
   const btnPrimary: React.CSSProperties = { ...btn, background: "rgba(120,200,255,0.14)", borderColor: "rgba(120,200,255,0.35)" };
-  const listCard: React.CSSProperties = { border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: 14, padding: 12 };
-  const pill: React.CSSProperties = { ...chip, padding: "3px 8px", fontSize: 11 };
+  const listCard: React.CSSProperties = { border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 8 };
+  const pill: React.CSSProperties = { ...chip, padding: "2px 6px", fontSize: 10 };
 
   return (
     <div className="shell" style={shell}>
@@ -687,10 +687,10 @@ export default function Page() {
         cardHeader={cardHeader}
       />
 
-      <aside className="aside-right" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <section style={{ ...card, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 360, flex: "1 1 auto", maxHeight: "88vh" }}>
+      <aside className="aside-right" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <section style={{ ...card, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 300, flex: "1 1 auto", maxHeight: "88vh" }}>
           <div style={{ ...cardHeader, alignItems: "flex-start" }}>
-            <div style={{ display: "grid", gap: 2 }}>
+            <div style={{ display: "grid", gap: 1 }}>
               <div style={{ fontWeight: 800 }}>파티 정보</div>
             </div>
             <div style={{ ...muted, marginLeft: "auto" }}>
@@ -698,33 +698,33 @@ export default function Page() {
                 const n = queueCounts[selectedId] ?? 0;
                 const eta = avgWaitMs[selectedId];
                 const etaMin = typeof eta === "number" && eta > 0 ? Math.max(1, Math.round(eta / 60000)) : 0;
-                return `매칭중${".".repeat(dotTick)} · 현재 ${n}명${etaMin ? ` · 예상 ${etaMin}분` : ""}`;
+                return `매칭중${".".repeat(dotTick)} · ${n}명${etaMin ? ` · ${etaMin}분` : ""}`;
               })() : `완료 (${channel || "채널 발급"})`}
             </div>
           </div>
 
-          <div style={{ padding: 14, display: "grid", gap: 10, overflowY: "auto", flex: 1, minHeight: 0 }}>
+          <div style={{ padding: 10, display: "grid", gap: 8, overflowY: "auto", flex: 1, minHeight: 0 }}>
             {party ? (
-              <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 800, display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontWeight: 800, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                   <span>파티원 목록</span>
                   <span style={muted}>{party.members?.length ?? 0}/6명</span>
                 </div>
-                <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gap: 5 }}>
                   {(party.members || []).map((m: any) => {
                     const jobColor = m.job === "전사" ? "#ff6b6b" : m.job === "도적" ? "#cc5de8" : m.job === "궁수" ? "#51cf66" : m.job === "마법사" ? "#339af0" : "#e6e8ee";
                     const isOwner = party.ownerId === m.userId;
                     return (
-                      <div key={m.userId || m.id} style={{ ...listCard, padding: "10px", borderLeft: `4px solid ${jobColor}`, background: "rgba(255,255,255,0.03)" }}>
+                      <div key={m.userId || m.id} style={{ ...listCard, padding: "6px 8px", borderLeft: `3px solid ${jobColor}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            {isOwner && <span title="파티장">👑</span>}
-                            <span style={{ fontWeight: 800, fontSize: 14 }}>{m.name || m.displayName}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {isOwner && <span style={{ fontSize: 12 }} title="파티장">👑</span>}
+                            <span style={{ fontWeight: 800, fontSize: 13 }}>{m.name || m.displayName}</span>
                           </div>
-                          <div style={{ color: jobColor, fontWeight: 700, fontSize: 12 }}>Lv.{m.level} {m.job}</div>
+                          <div style={{ color: jobColor, fontWeight: 700, fontSize: 11 }}>Lv.{m.level} {m.job}</div>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-                          <div style={{ ...muted, fontSize: 11 }}>스공: {fmtNumber(m.power)}</div>
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+                          <div style={{ ...muted, fontSize: 10 }}>스공: {fmtNumber(m.power)}</div>
                         </div>
                       </div>
                     );
@@ -732,65 +732,64 @@ export default function Page() {
                 </div>
               </div>
             ) : (
-              <div style={{ ...muted, padding: "40px 10px", textAlign: "center" }}>
-                참가 중인 파티가 없습니다.<br/>매칭을 시작하거나 파티를 만들어보세요.
+              <div style={{ ...muted, padding: "30px 10px", textAlign: "center" }}>
+                파티 없음
               </div>
             )}
 
-            <div style={{ display: "grid", gap: 8, marginTop: "auto" }}>
-              <div style={{ fontWeight: 800 }}>매칭 상태</div>
+            <div style={{ display: "grid", gap: 6, marginTop: "auto" }}>
+              <div style={{ fontWeight: 800, fontSize: 13 }}>매칭 상태</div>
               {matchState === "searching" && (
-                <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(255,255,255,0.65)", animation: "pulse 1.2s ease-in-out infinite" }} />
-                    <div style={{ fontWeight: 850 }}>{`매칭중입니다${".".repeat(dotTick)}`}</div>
+                <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 999, background: "rgba(255,255,255,0.65)", animation: "pulse 1.2s ease-in-out infinite" }} />
+                    <div style={{ fontWeight: 850, fontSize: 12 }}>{`매칭중${".".repeat(dotTick)}`}</div>
                   </div>
-                  <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", position: "relative" }}>
+                  <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", position: "relative" }}>
                     <div style={{ position: "absolute", inset: 0, width: "45%", background: "rgba(120,200,255,0.20)", animation: "mlqIndeterminate 1.35s ease-in-out infinite" }} />
                   </div>
                 </div>
               )}
 
               {matchState === "matched" && (
-                <div style={{ display: "grid", gap: 12 }}>
-                  <div style={{ fontWeight: 900, fontSize: 16 }}>매칭완료!</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ fontWeight: 900, fontSize: 14 }}>매칭완료!</div>
                   {channel ? (
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <div style={{ ...chip, background: "rgba(120,200,255,0.12)" }}>채널</div>
-                      <div style={{ fontWeight: 1000, fontSize: 18 }}>{channel}</div>
-                      <button onClick={() => { if (tryCopy(channel)) setToast({ type: "ok", msg: "채널 복사 완료" }); }} style={btnSm}>복사</button>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <div style={{ ...chip, padding: "2px 6px" }}>채널</div>
+                      <div style={{ fontWeight: 1000, fontSize: 16 }}>{channel}</div>
+                      <button onClick={() => { if (tryCopy(channel)) setToast({ type: "ok", msg: "복사 완료" }); }} style={btnSm}>복사</button>
                     </div>
-                  ) : <div style={muted}>채널 설정 중...</div>}
-                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div style={{ fontWeight: 900, marginBottom: 10 }}>파티 코드 입장</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input style={{ ...input, flex: 1 }} placeholder="코드" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                  ) : <div style={{ ...muted, fontSize: 11 }}>채널 대기 중...</div>}
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input style={{ ...input, flex: 1, padding: "6px 8px" }} placeholder="코드" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
                       <button style={btnSm} onClick={joinPartyByCode}>입장</button>
                     </div>
                   </div>
                   {isLeader && !channelReady && (
-                    <div style={{ display: "grid", gap: 10 }}>
-                      <div style={{ fontWeight: 800 }}>채널 설정</div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <select value={channelLetter} onChange={(e) => setChannelLetter(e.target.value)} style={input}>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div style={{ fontWeight: 800, fontSize: 12 }}>채널 설정</div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <select value={channelLetter} onChange={(e) => setChannelLetter(e.target.value)} style={{ ...input, padding: "4px" }}>
                           {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
-                        <select value={channelNum} onChange={(e) => setChannelNum(e.target.value)} style={input}>
+                        <select value={channelNum} onChange={(e) => setChannelNum(e.target.value)} style={{ ...input, padding: "4px" }}>
                           {Array.from({ length: 999 }, (_, i) => String(i+1).padStart(3, '0')).map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
-                        <button onClick={setChannelByLeader} style={btnPrimary}>확정</button>
+                        <button onClick={setChannelByLeader} style={{ ...btnPrimary, padding: "4px 8px" }}>확정</button>
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-                {matchState === "searching" && <button onClick={leaveQueue} style={{ ...btn, flex: 1, background: "rgba(255,120,120,0.12)" }}>큐 취소</button>}
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {matchState === "searching" && <button onClick={leaveQueue} style={{ ...btn, flex: 1, background: "rgba(255,120,120,0.12)", padding: "8px" }}>큐 취소</button>}
                 {matchState === "matched" && (
                   <>
-                    <button onClick={rematch} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)" }}>다시 매칭</button>
-                    <button onClick={leaveQueue} style={{ ...btn, background: "rgba(255,120,120,0.12)" }}>나가기</button>
+                    <button onClick={rematch} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)", padding: "8px" }}>다시 매칭</button>
+                    <button onClick={leaveQueue} style={{ ...btn, background: "rgba(255,120,120,0.12)", padding: "8px" }}>나가기</button>
                   </>
                 )}
               </div>
@@ -819,13 +818,13 @@ export default function Page() {
             <div style={{ fontWeight: 900 }}>{selected?.name ?? "사냥터 선택"}</div>
             <div style={muted}>{selected?.recommendedLevel ?? ""}</div>
           </div>
-          <div style={{ padding: 14, display: "grid", gap: 12 }}>
-            <div style={{ ...card, background: "rgba(0,0,0,0.20)", padding: 14 }}>
+          <div style={{ padding: 10, display: "grid", gap: 10 }}>
+            <div style={{ ...card, background: "rgba(0,0,0,0.20)", padding: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div><div style={{ fontWeight: 900 }}>정보</div><div style={muted}>{selected?.area ?? ""}</div></div>
-                <div style={{ textAlign: "right" }}><div style={{ fontWeight: 900 }}>현재 큐</div><div style={muted}>{queueCounts[selected?.id ?? ""] ?? 0}명</div></div>
+                <div><div style={{ fontWeight: 900, fontSize: 13 }}>정보</div><div style={muted}>{selected?.area ?? ""}</div></div>
+                <div style={{ textAlign: "right" }}><div style={{ fontWeight: 900, fontSize: 13 }}>현재 큐</div><div style={muted}>{queueCounts[selected?.id ?? ""] ?? 0}명</div></div>
               </div>
-              <div style={{ ...muted, marginTop: 8 }}>{selected?.note ?? ""}</div>
+              <div style={{ ...muted, marginTop: 4, fontSize: 11 }}>{selected?.note ?? ""}</div>
             </div>
             <PublicPartyPanel
               selectedName={selected?.name ?? null} selectedId={selected?.id ?? null} myPartyId={partyId || null}
@@ -839,41 +838,41 @@ export default function Page() {
                 card={card} muted={muted} chip={chip} input={input}
               />
             )}
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => startMatching()} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)", padding: "12px" }}>이 사냥터로 큐 참가</button>
-              <button onClick={() => { if (!isLoggedIn) { setToast({ type: "err", msg: "로그인 필요" }); return; } setCreatePartyOpen(true); }} style={{ ...btn, padding: "12px" }}>파티 만들기</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => startMatching()} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)", padding: "10px" }}>큐 참가</button>
+              <button onClick={() => { if (!isLoggedIn) { setToast({ type: "err", msg: "로그인 필요" }); return; } setCreatePartyOpen(true); }} style={{ ...btn, padding: "10px" }}>파티 만들기</button>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="footer-content" style={{ ...card, background: "rgb(12,16,24)", padding: 14 }}>
-        <div style={{ textAlign: "center", ...muted }}>하단 배너 영역</div>
+      <footer className="footer-content" style={{ ...card, background: "rgb(12,16,24)", padding: 8 }}>
+        <div style={{ textAlign: "center", ...muted }}>하단 영역</div>
       </footer>
 
       {settingsOpen && (
         <div onClick={() => setSettingsOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.60)", display: "grid", placeItems: "center", zIndex: 90 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(520px, 96vw)", borderRadius: 16, background: "rgba(18,18,22,0.98)", padding: 16, border: "1px solid rgba(255,255,255,0.12)" }}>
-            <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 12 }}>프로필 및 블랙리스트 설정</div>
-            <div style={{ display: "grid", gap: 12 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(480px, 96vw)", borderRadius: 14, background: "rgba(18,18,22,0.98)", padding: 14, border: "1px solid rgba(255,255,255,0.12)" }}>
+            <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 10 }}>설정</div>
+            <div style={{ display: "grid", gap: 10 }}>
               <div style={formRow}><div style={label}>닉네임</div><input style={input} value={nickname} onChange={(e) => setNickname(e.target.value)} /></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div style={formRow}><div style={label}>레벨</div><input style={input} value={String(level)} onChange={(e) => setLevel(clampInt(e.target.value, 1, 300))} /></div>
                 <div style={formRow}><div style={label}>직업</div><select style={input} value={job} onChange={(e) => setJob(e.target.value as Job)}><option value="전사">전사</option><option value="도적">도적</option><option value="궁수">궁수</option><option value="마법사">마법사</option></select></div>
               </div>
               <div style={formRow}><div style={label}>스공</div><input style={input} value={String(power)} onChange={(e) => setPower(clampInt(e.target.value, 0, 9999999))} /></div>
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 10 }}>
-                <div style={label}>블랙리스트 관리</div>
-                <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8 }}>
+                <div style={label}>블랙리스트</div>
+                <div style={{ display: "flex", gap: 6 }}>
                   <input style={{ ...input, flex: 1 }} value={blackInput} onChange={(e) => setBlackInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addBlacklist()} />
                   <button onClick={addBlacklist} style={btnSm}>추가</button>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
                   {blacklist.map(b => <button key={b} onClick={() => removeBlacklist(b)} style={{ ...chip, background: "rgba(255,80,80,0.1)" }}>{b} ✕</button>)}
                 </div>
               </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
               <button onClick={() => setSettingsOpen(false)} style={btn}>닫기</button>
               <button onClick={() => { emitProfile(socketRef.current); setToast({ type: "ok", msg: "저장 완료" }); setSettingsOpen(false); }} style={btnPrimary}>저장</button>
             </div>
@@ -883,14 +882,14 @@ export default function Page() {
 
       {createPartyOpen && (
         <div onClick={() => setCreatePartyOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.60)", display: "grid", placeItems: "center", zIndex: 100 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(460px, 96vw)", borderRadius: 16, background: "rgba(18,18,22,0.98)", padding: 20, border: "1px solid rgba(255,255,255,0.12)" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 16 }}>파티 만들기</div>
-            <div style={{ display: "grid", gap: 12 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(400px, 96vw)", borderRadius: 14, background: "rgba(18,18,22,0.98)", padding: 16, border: "1px solid rgba(255,255,255,0.12)" }}>
+            <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 12 }}>파티 만들기</div>
+            <div style={{ display: "grid", gap: 10 }}>
               <input style={input} placeholder="파티 제목" value={createTitle} onChange={(e) => setCreateTitle(e.target.value)} />
-              <label style={{ display: "flex", gap: 10, alignItems: "center" }}><input type="checkbox" checked={createLocked} onChange={(e) => setCreateLocked(e.target.checked)} /> 비밀번호 설정</label>
+              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}><input type="checkbox" checked={createLocked} onChange={(e) => setCreateLocked(e.target.checked)} /> 비밀번호 설정</label>
               {createLocked && <input style={input} placeholder="비밀번호" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} />}
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button onClick={() => setCreatePartyOpen(false)} style={{ ...btn, flex: 1 }}>취소</button>
               <button onClick={createPartyManual} style={{ ...btnPrimary, flex: 1 }}>생성하기</button>
             </div>
@@ -899,26 +898,26 @@ export default function Page() {
       )}
 
       <style>{`
-        .shell { display: grid; grid-template-columns: 280px 1fr 380px; grid-template-rows: 72px 1fr auto; gap: 16px; padding: 16px; max-width: 1920px; margin: 0 auto; }
+        .shell { display: grid; grid-template-columns: 240px 1fr 320px; grid-template-rows: 60px 1fr auto; gap: 10px; padding: 10px; max-width: 1600px; margin: 0 auto; }
         .discord-aside { grid-column: 1; grid-row: 1 / span 3; }
         .search-header { grid-column: 2; grid-row: 1; }
-        .main-content { grid-column: 2; grid-row: 2; grid-template-columns: 340px 1fr; gap: 0; }
+        .main-content { grid-column: 2; grid-row: 2; grid-template-columns: 280px 1fr; gap: 0; }
         .aside-right { grid-column: 3; grid-row: 1 / span 3; }
         .footer-content { grid-column: 2 / span 2; grid-row: 3; }
         @media (max-width: 1200px) {
-          .shell { grid-template-columns: 240px 1fr; grid-template-rows: 72px auto auto auto; }
+          .shell { grid-template-columns: 220px 1fr; grid-template-rows: 60px auto auto auto; }
           .aside-right { grid-column: 1 / span 2; grid-row: 3; }
           .footer-content { grid-column: 1 / span 2; grid-row: 4; }
         }
         @media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } }
         @media (max-width: 768px) {
-          .shell { grid-template-columns: 1fr; grid-template-rows: auto; }
+          .shell { grid-template-columns: 1fr; grid-template-rows: auto; padding: 8px; gap: 8px; }
           .discord-aside, .search-header, .main-content, .aside-right, .footer-content { grid-column: 1 !important; grid-row: auto !important; }
         }
         @keyframes pulse { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.4); opacity: 1; } }
         @keyframes mlqIndeterminate { 0% { transform: translateX(-110%); } 50% { transform: translateX(40%); } 100% { transform: translateX(210%); } }
         button { transition: all 0.2s; }
-        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        button:active { transform: scale(0.98); }
       `}</style>
     </div>
   );
