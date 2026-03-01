@@ -634,14 +634,15 @@ export default function Page() {
     setBlacklist((prev) => prev.filter((x) => x !== v));
   }
 
-  function startMatching() {
+  async function startMatching() {
     if (!validateProfile()) return;
     if (!selected || matchState === "searching") return;
     if (party && me) {
       const isOwner = party.ownerId === me.user.id;
       if (!isOwner) {
-        if (!window.confirm("현재 참가 중인 파티에서 나가고 매칭을 시작할까요?")) return;
-        leaveQueue(); 
+        await leavePartyOnServer(partyId);
+        setPartyId("");
+        setParty(null);
       }
     }
     joinQueue();
@@ -807,27 +808,43 @@ export default function Page() {
                     <button onClick={leaveQueue} style={{ ...btn, background: "rgba(255,120,120,0.12)", padding: "8px" }}>나가기</button>
                   </>
                 )}
+                {partyId && matchState !== "searching" && matchState !== "matched" && (
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm("파티에서 나갈까요?")) {
+                        await leavePartyOnServer(partyId);
+                        setPartyId("");
+                        setParty(null);
+                      }
+                    }} 
+                    style={{ ...btn, flex: 1, background: "rgba(255,80,80,0.15)", borderColor: "rgba(255,80,80,0.3)", padding: "8px" }}
+                  >
+                    파티 나가기
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </section>
       </aside>
 
-      <main className="main-content" style={{ ...card, display: "grid" }}>
-        <GroundCardList
-          className="ground-card-list"
-          filtered={filtered}
-          selectedId={selected?.id ?? ""}
-          onSelectGround={onSelectGround}
-          isCustomSelected={isCustomSelected}
-          openNewGround={openNewGround}
-          openEditGround={openEditGround}
-          deleteSelectedGround={deleteSelectedGround}
-          cardHeader={cardHeader}
-          muted={muted}
-          btn={btn}
-          queueCounts={queueCounts}
-        />
+      <main className="main-content" style={{ ...card, display: "grid", gridTemplateColumns: partyId ? "1fr" : "280px 1fr" }}>
+        {!partyId && (
+          <GroundCardList
+            className="ground-card-list"
+            filtered={filtered}
+            selectedId={selected?.id ?? ""}
+            onSelectGround={onSelectGround}
+            isCustomSelected={isCustomSelected}
+            openNewGround={openNewGround}
+            openEditGround={openEditGround}
+            deleteSelectedGround={deleteSelectedGround}
+            cardHeader={cardHeader}
+            muted={muted}
+            btn={btn}
+            queueCounts={queueCounts}
+          />
+        )}
         <section>
           <div style={cardHeader}>
             <div style={{ fontWeight: 900 }}>{selected?.name ?? "사냥터 선택"}</div>
