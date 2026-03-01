@@ -22,14 +22,15 @@ export function PublicPartyPanel(props: {
   myPartyId: string | null;
   parties: Party[];
   onRefresh: () => void;
-  onJoin: (partyId: string, lockPassword?: string) => void;
+  onJoin: (party: Party, lockPassword?: string) => void;
   card: React.CSSProperties;
   muted: React.CSSProperties;
   btnSm: React.CSSProperties;
   listCard: React.CSSProperties;
   pill: React.CSSProperties;
+  isJoining?: boolean;
 }) {
-  const { selectedName, selectedId, myPartyId, parties, onRefresh, onJoin, card, muted, btnSm, listCard, pill } = props;
+  const { selectedName, selectedId, myPartyId, parties, onRefresh, onJoin, card, muted, btnSm, listCard, pill, isJoining } = props;
   const sorted = [...(parties || [])].sort((a, b) => {
     const aMine = myPartyId && a.id === myPartyId;
     const bMine = myPartyId && b.id === myPartyId;
@@ -60,6 +61,8 @@ export function PublicPartyPanel(props: {
         {sorted.map((p) => {
           const locked = !!(p.isLocked ?? p.locked);
           const count = p.memberCount ?? p.members?.length ?? 0;
+          const maxMembers = p.maxMembers ?? 6;
+          const isFull = count >= maxMembers;
           const title = p.title || (selectedName ? `${selectedName} 파티` : "파티");
           const isMine = myPartyId && p.id === myPartyId;
           const gOk = !selectedId || p.groundId === selectedId || (!p.groundId && selectedName && (p.title || "").includes(selectedName));
@@ -73,24 +76,18 @@ export function PublicPartyPanel(props: {
                     {locked ? <span style={{ ...pill, borderColor: "rgba(255,180,120,0.35)", background: "rgba(255,180,120,0.10)" }}>잠금</span> : null}
                     {isMine ? <span style={{ ...pill, borderColor: "rgba(120,200,255,0.40)", background: "rgba(120,200,255,0.12)" }}>내 파티</span> : null}
                   </div>
-                  <div style={muted}>{`${count}/${p.maxMembers ?? 6}명`}</div>
+                  <div style={muted}>{`${count}/${maxMembers}명`}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
                     onClick={() => {
-                      if (count >= (p.maxMembers ?? 6)) return;
-                      if (locked) {
-                        const pw = prompt("비밀번호");
-                        if (pw == null) return;
-                        onJoin(p.id, pw);
-                      } else {
-                        onJoin(p.id);
-                      }
+                      if (isFull || isJoining) return;
+                      onJoin(p);
                     }}
-                    style={{ ...btnSm, cursor: count >= (p.maxMembers ?? 6) ? "not-allowed" : "pointer", opacity: count >= (p.maxMembers ?? 6) ? 0.5 : 1 }}
-                    disabled={count >= (p.maxMembers ?? 6)}
+                    style={{ ...btnSm, cursor: (isFull || isJoining) ? "not-allowed" : "pointer", opacity: (isFull || isJoining) ? 0.5 : 1 }}
+                    disabled={isFull || isJoining}
                   >
-                    참가
+                    {isFull ? "정원 초과" : isJoining ? "참가 중..." : "참가"}
                   </button>
                 </div>
               </div>

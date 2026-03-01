@@ -138,6 +138,7 @@ export default function Page() {
 
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createPartyOpen, setCreatePartyOpen] = useState(false);
 
 
   const [customGrounds, setCustomGrounds] = useState<HuntingGround[]>([]);
@@ -197,6 +198,7 @@ export default function Page() {
   const [channelReady, setChannelReady] = useState(false);
   const [partyId, setPartyId] = useState<string>("");
   const [party, setParty] = useState<any | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
 
 
   const [queueCounts, setQueueCounts] = useState<Record<string, number>>({});
@@ -522,10 +524,31 @@ export default function Page() {
     }
   };
 
-  const joinPartyDirect = async (partyId: string, lockPassword?: string) => {
-    if (!partyId) return;
+  const leavePartyOnServer = async (pid: string) => {
+    try {
+      const sid = getSid();
+      await fetch(apiUrl("/api/party/leave"), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(sid ? { "x-ml-session": sid } : {}),
+        },
+        body: JSON.stringify({ partyId: pid }),
+      });
+    } catch {}
+  };
+
+  const joinPartyDirect = async (targetPartyId: string, lockPassword?: string) => {
+    if (!targetPartyId || isJoining) return;
+    setIsJoining(true);
     try {
       setToast(null);
+
+      if (partyId && partyId !== targetPartyId) {
+        await leavePartyOnServer(partyId);
+      }
+
       const sid = getSid();
       const res = await fetch(apiUrl("/api/party/join"), {
         method: "POST",
@@ -534,10 +557,16 @@ export default function Page() {
           "Content-Type": "application/json",
           ...(sid ? { "x-ml-session": sid } : {}),
         },
-        body: JSON.stringify({ partyId, lockPassword: lockPassword || undefined }),
+        body: JSON.stringify({ partyId: targetPartyId, lockPassword: lockPassword || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "파티 참가 실패");
+      if (!res.ok) {
+        let msg = data?.error || "파티 참가 실패";
+        if (msg === "FULL") msg = "파티가 이미 꽉 찼습니다.";
+        if (msg === "BAD_PASSWORD") msg = "비밀번호가 일치하지 않습니다.";
+        if (msg === "NOT_FOUND") msg = "파티를 찾을 수 없습니다.";
+        throw new Error(msg);
+      }
       const pid = String(data?.party?.id ?? "");
       if (!pid) throw new Error("INVALID_RESPONSE");
       setPartyId(pid);
@@ -545,18 +574,22 @@ export default function Page() {
       setToast({ type: "ok", msg: "파티에 참가했습니다." });
     } catch (e: any) {
       setToast({ type: "err", msg: e?.message || "파티 참가 실패" });
+    } finally {
+      setIsJoining(false);
     }
   };
 
-  const joinFromList = async (p: any) => {
-    if (!p?.id) return;
-    if (p.isLocked) {
+  const joinFromList = async (p: any, lockPassword?: string) => {
+    const pid = typeof p === "string" ? p : p?.id;
+    if (!pid) return;
+
+    if (!lockPassword && (p?.isLocked || p?.locked)) {
       const pw = window.prompt("이 파티는 잠금 상태입니다. 비밀번호를 입력하세요.");
       if (pw === null) return;
-      await joinPartyDirect(p.id, pw);
-      return;
+      await joinPartyDirect(pid, pw);
+    } else {
+      await joinPartyDirect(pid, lockPassword);
     }
-    await joinPartyDirect(p.id);
   };
 
   const refreshParties = async () => {
@@ -570,6 +603,8 @@ export default function Page() {
   };
 
   const createPartyManual = async () => {
+    if (isJoining) return;
+    setIsJoining(true);
     try {
       const autoTitle = selected?.name ? `${selected.name} 파티` : "파티";
       const title = (createTitle || autoTitle).trim();
@@ -578,6 +613,11 @@ export default function Page() {
         alert("비밀번호는 2글자 이상으로 설정해줘.");
         return;
       }
+
+      if (partyId) {
+        await leavePartyOnServer(partyId);
+      }
+
       const sid = getSid();
       const res = await fetch(apiUrl("/api/party"), {
         method: "POST",
@@ -597,18 +637,28 @@ export default function Page() {
       setCreateTitle("");
       setCreatePassword("");
       setCreateLocked(false);
+      setCreatePartyOpen(false);
+      setToast({ type: "ok", msg: "파티가 생성되었습니다." });
     } catch (e: any) {
-      alert(`파티 생성 실패: ${e?.message ?? e}`);
+      setToast({ type: "err", msg: `파티 생성 실패: ${e?.message ?? e}` });
+    } finally {
+      setIsJoining(false);
     }
   };
-
   const createPublicPartyAndJoinQueue = async () => {
     if (!isLoggedIn) {
       setToast({ type: "err", msg: "디스코드 로그인이 필요합니다." });
       return;
     }
+    if (isJoining) return;
+    setIsJoining(true);
     try {
       const title = selected?.name ? `${selected.name} 공개 파티` : "공개 파티";
+      
+      if (partyId) {
+        await leavePartyOnServer(partyId);
+      }
+
       const sid = getSid();
       const res = await fetch(apiUrl("/api/party"), {
         method: "POST",
@@ -630,6 +680,8 @@ export default function Page() {
       joinQueue({ partyId: pid });
     } catch (e: any) {
       setToast({ type: "err", msg: e?.message || "공개 파티 생성 실패" });
+    } finally {
+      setIsJoining(false);
     }
   };
   const joinQueue = (opts?: { partyId?: string | null }) => {
@@ -691,10 +743,17 @@ export default function Page() {
 
   function startMatching() {
     if (!selected) return;
-
-
     if (matchState === "searching") return;
 
+    if (party && me) {
+      const isOwner = party.ownerId === me.user.id;
+      if (!isOwner) {
+        if (!window.confirm("현재 참가 중인 파티에서 나가고 매칭을 시작할까요?")) {
+          return;
+        }
+        leaveQueue(); 
+      }
+    }
 
     joinQueue();
   }
@@ -1145,13 +1204,13 @@ export default function Page() {
                   </div>
                 ) : null}
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontWeight: 900, marginBottom: 8 }}>파티 코드로 입장 / 생성</div>
+                  <div style={{ fontWeight: 900, marginBottom: 10 }}>파티 코드 입장</div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+                  <div style={{ display: "grid", gap: 10 }}>
                     <div style={{ display: "flex", gap: 8 }}>
                       <input
                         style={{ ...input, flex: 1 }}
-                        placeholder="파티 코드 입력 (예: ABCD-1234)"
+                        placeholder="파티 코드 (예: ABCD-1234)"
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value)}
                       />
@@ -1166,35 +1225,8 @@ export default function Page() {
                       onChange={(e) => setJoinPassword(e.target.value)}
                     />
 
-                    <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
-
-                    <input
-                      style={input}
-                      placeholder="새 파티 제목 (선택)"
-                      value={createTitle}
-                      onChange={(e) => setCreateTitle(e.target.value)}
-                    />
-
-                    <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "rgba(230,232,238,0.9)" }}>
-                      <input type="checkbox" checked={createLocked} onChange={(e) => setCreateLocked(e.target.checked)} />
-                      비공개(비밀번호)
-                    </label>
-
-                    {createLocked ? (
-                      <input
-                        style={input}
-                        placeholder="새 파티 비밀번호"
-                        value={createPassword}
-                        onChange={(e) => setCreatePassword(e.target.value)}
-                      />
-                    ) : null}
-
-                    <button style={{ ...btn, width: "100%" }} onClick={createPartyManual}>
-                      파티 만들기
-                    </button>
-
-                    <div style={{ ...muted, marginTop: 4 }}>
-                      • 파티장이 비공개로 만든 파티는 비밀번호가 필요해요.
+                    <div style={{ ...muted, fontSize: 12 }}>
+                      • 파티장의 코드 또는 비밀번호가 필요해요.
                     </div>
                   </div>
                 </div>
@@ -1355,10 +1387,13 @@ export default function Page() {
             <style>{`
               .shell {
                 display: grid;
-                grid-template-columns: 260px 1fr 400px;
+                grid-template-columns: 280px 1fr 380px;
                 grid-template-rows: 72px 1fr auto;
-                gap: 14px;
-                padding: 14px;
+                gap: 16px;
+                padding: 16px;
+                max-width: 1920px;
+                margin: 0 auto;
+                transition: all 0.3s ease;
               }
               .discord-aside {
                 grid-column: 1;
@@ -1372,6 +1407,7 @@ export default function Page() {
                 grid-column: 2;
                 grid-row: 2;
                 grid-template-columns: 340px 1fr;
+                gap: 0;
               }
               .aside-right {
                 grid-column: 3;
@@ -1382,9 +1418,20 @@ export default function Page() {
                 grid-row: 3;
               }
 
-              @media (max-width: 1300px) {
+              @media (max-width: 1440px) {
                 .shell {
-                  grid-template-columns: 260px 1fr;
+                  grid-template-columns: 260px 1fr 340px;
+                  gap: 12px;
+                  padding: 12px;
+                }
+                .main-content {
+                  grid-template-columns: 300px 1fr;
+                }
+              }
+
+              @media (max-width: 1200px) {
+                .shell {
+                  grid-template-columns: 240px 1fr;
                   grid-template-rows: 72px auto auto auto;
                 }
                 .aside-right {
@@ -1395,24 +1442,35 @@ export default function Page() {
                   grid-column: 1 / span 2;
                   grid-row: 4;
                 }
+                .main-content {
+                  grid-template-columns: 280px 1fr;
+                }
               }
 
-              @media (max-width: 1000px) {
+              @media (max-width: 900px) {
                 .main-content {
                   grid-template-columns: 1fr;
+                }
+                .main-content > section:first-child {
+                  border-bottom: 1px solid rgba(255,255,255,0.08);
+                  max-height: 400px;
+                  overflow-y: auto;
                 }
               }
 
               @media (max-width: 768px) {
                 .shell {
                   grid-template-columns: 1fr;
-                  grid-template-rows: auto auto auto auto auto;
-                  padding: 8px;
-                  gap: 8px;
+                  grid-template-rows: auto;
+                  padding: 10px;
+                  gap: 10px;
                 }
                 .discord-aside, .search-header, .main-content, .aside-right, .footer-content {
                   grid-column: 1 !important;
                   grid-row: auto !important;
+                }
+                .main-content {
+                  grid-template-columns: 1fr;
                 }
               }
 
@@ -1430,6 +1488,24 @@ export default function Page() {
               @keyframes mlqSweep {
                 0% { transform: translateX(-30%); }
                 100% { transform: translateX(30%); }
+              }
+
+              button {
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+              }
+              button:hover {
+                filter: brightness(1.1);
+                transform: translateY(-1px);
+              }
+              button:active {
+                transform: translateY(0);
+              }
+              input, select {
+                transition: border-color 0.2s ease, box-shadow 0.2s ease;
+              }
+              input:focus, select:focus {
+                border-color: rgba(120,200,255,0.4) !important;
+                box-shadow: 0 0 0 2px rgba(120,200,255,0.1);
               }
             `}</style>
           </div>
@@ -1529,6 +1605,7 @@ export default function Page() {
               parties={(selected?.name ? partiesForSelected : partyList) as any[]}
               onRefresh={refreshParties}
               onJoin={joinFromList}
+              isJoining={isJoining}
               card={card}
               muted={muted}
               btnSm={btnSm}
@@ -1536,7 +1613,7 @@ export default function Page() {
               pill={pill}
             />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="main-panels" style={{ display: "grid", gap: 12 }}>
               <BuffTable
                 partyId={partyId}
                 party={party}
@@ -1555,7 +1632,7 @@ export default function Page() {
 </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               <button
                 onClick={() => startMatching()}
                 style={{
@@ -1572,7 +1649,13 @@ export default function Page() {
                 이 사냥터로 큐 참가
               </button>
               <button
-                onClick={() => createPublicPartyAndJoinQueue()}
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    setToast({ type: "err", msg: "디스코드 로그인이 필요합니다." });
+                    return;
+                  }
+                  setCreatePartyOpen(true);
+                }}
                 style={{
                   border: "1px solid rgba(255,255,255,0.14)",
                   background: "rgba(255,255,255,0.06)",
@@ -1583,7 +1666,7 @@ export default function Page() {
                   fontWeight: 900,
                 }}
               >
-                공개 파티 만들기
+                파티 만들기
               </button>
             </div>
           </div>
@@ -1710,6 +1793,103 @@ export default function Page() {
                 }}
               >
                 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {createPartyOpen ? (
+        <div
+          onClick={() => setCreatePartyOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.60)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 100,
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(460px, 96vw)",
+              borderRadius: 16,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(18,18,22,0.98)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+              padding: 20,
+              display: "grid",
+              gap: 16,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900 }}>파티 만들기</div>
+              <div style={{ ...muted, marginTop: 4 }}>새로운 파티를 생성하고 사람들을 모집하세요.</div>
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>파티 제목</div>
+              <input
+                style={{ ...input, width: "100%", boxSizing: "border-box" }}
+                placeholder={selected?.name ? `${selected.name} 파티` : "파티 제목 입력"}
+                value={createTitle}
+                onChange={(e) => setCreateTitle(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={createLocked}
+                  onChange={(e) => setCreateLocked(e.target.checked)}
+                  style={{ width: 18, height: 18, cursor: "pointer" }}
+                />
+                <div style={{ fontSize: 14, fontWeight: 700 }}>비밀번호 설정 (비공개 파티)</div>
+              </label>
+
+              {createLocked ? (
+                <input
+                  style={{ ...input, width: "100%", boxSizing: "border-box" }}
+                  placeholder="비밀번호 입력 (2글자 이상)"
+                  value={createPassword}
+                  onChange={(e) => setCreatePassword(e.target.value)}
+                />
+              ) : null}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+              <button
+                onClick={() => setCreatePartyOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#e6e8ee",
+                  cursor: "pointer",
+                  fontWeight: 800,
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={createPartyManual}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(120,200,255,0.20)",
+                  background: "rgba(120,200,255,0.14)",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                생성하기
               </button>
             </div>
           </div>

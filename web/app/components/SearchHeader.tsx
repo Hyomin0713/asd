@@ -14,7 +14,7 @@ type Props = {
 
 export function SearchHeader({ query, onChangeQuery, countText, muted, card, cardHeader, className }: Props) {
   return (
-    <header className={className} style={{ ...card, gridColumn: "2", gridRow: "1", display: "flex", alignItems: "center" }}>
+    <header className={className} style={{ ...card, display: "flex", alignItems: "center" }}>
       <div style={{ ...cardHeader, borderBottom: "none", width: "100%" }}>
         <div style={{ fontWeight: 800 }}>사냥터 검색</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "flex-end" }}>

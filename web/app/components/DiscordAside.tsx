@@ -32,8 +32,6 @@ export function DiscordAside({
       className={className}
       style={{
         ...card,
-        gridColumn: "1",
-        gridRow: "1 / span 3",
         display: "flex",
         flexDirection: "column",
       }}
