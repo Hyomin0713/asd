@@ -1027,6 +1027,43 @@ export default function Page() {
             />
           </label>
 
+          {/* Party Member List Section - Always visible if in a party */}
+          {party && (
+            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+              <div style={{ fontWeight: 800, display: "flex", justifyContent: "space-between" }}>
+                <span>파티원 목록</span>
+                <span style={muted}>{party.members?.length ?? 0}/6명</span>
+              </div>
+              <div style={{ display: "grid", gap: 6 }}>
+                {(party.members || []).map((m: any) => {
+                  const jobColor = 
+                    m.job === "전사" ? "#ff6b6b" :
+                    m.job === "도적" ? "#cc5de8" :
+                    m.job === "궁수" ? "#51cf66" :
+                    m.job === "마법사" ? "#339af0" : "#e6e8ee";
+                  const isOwner = party.ownerId === m.userId;
+
+                  return (
+                    <div key={m.userId || m.id} style={{ ...listCard, padding: "10px", borderLeft: `4px solid ${jobColor}`, background: "rgba(255,255,255,0.03)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {isOwner && <span title="파티장">👑</span>}
+                          <span style={{ fontWeight: 800, fontSize: 14 }}>{m.name || m.displayName}</span>
+                        </div>
+                        <div style={{ color: jobColor, fontWeight: 700, fontSize: 12 }}>
+                          Lv.{m.level} {m.job}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+                        <div style={{ ...muted, fontSize: 11 }}>스공: {fmtNumber(m.power)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 800 }}>블랙리스트</div>
