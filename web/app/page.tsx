@@ -156,19 +156,22 @@ export default function Page() {
   const [level, setLevel] = useState(50);
   const [job, setJob] = useState<Job>("전사");
   const [power, setPower] = useState(12000);
+  const [isCaptain, setIsCaptain] = useState(false);
 
   useEffect(() => {
     const saved = safeLocalGet("mlq.profile", null as any);
     if (saved && typeof saved === "object") {
+      if (typeof saved.nickname === "string") setNickname(saved.nickname);
       if (typeof saved.level === "number") setLevel(clampInt(String(saved.level), 1, 300));
       if (typeof saved.job === "string") setJob((saved.job as Job) ?? "전사");
       if (typeof saved.power === "number") setPower(clampInt(String(saved.power), 0, 9_999_999));
+      if (typeof saved.isCaptain === "boolean") setIsCaptain(saved.isCaptain);
     }
   }, []);
 
   useEffect(() => {
-    safeLocalSet("mlq.profile", { nickname, level, job, power });
-  }, [nickname, level, job, power]);
+    safeLocalSet("mlq.profile", { nickname, level, job, power, isCaptain });
+  }, [nickname, level, job, power, isCaptain]);
 
   const [blackInput, setBlackInput] = useState("");
   const [blacklist, setBlacklist] = useState<string[]>(["포켓몬성능"]);
@@ -245,13 +248,13 @@ export default function Page() {
   };
 
   const emitProfile = (s: Socket | null) => {
-    if (!s) return;
-    if (!isLoggedIn) return;
+    if (!s || !isLoggedIn) return;
     s.emit("queue:updateProfile", {
       displayName: nickname.trim() || discordName,
       level,
       job,
       power,
+      isCaptain,
     });
   };
 
@@ -540,14 +543,15 @@ export default function Page() {
 
   const createPartyManual = async () => {
     if (!validateProfile()) return;
-    if (selectedId === "octopus") {
-      if (!window.confirm("선장님이신가요? (위바협2는 선장님만 파티 생성이 권장됩니다)")) return;
-    }
     if (isJoining) return;
     setIsJoining(true);
     try {
+      let titlePrefix = "";
+      if (selectedId === "octopus" && !isCaptain) {
+        titlePrefix = "[선장님 없음] ";
+      }
       const autoTitle = selected?.name ? `${selected.name} 파티` : "파티";
-      const title = (createTitle || autoTitle).trim();
+      const title = (titlePrefix + (createTitle || autoTitle)).trim();
       const pw = createLocked ? createPassword.trim() : "";
       if (createLocked && pw.length < 2) {
         alert("비밀번호는 2글자 이상으로 설정해줘.");
@@ -874,6 +878,16 @@ export default function Page() {
               <button onClick={() => startMatching()} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)", padding: "10px" }}>큐 참가</button>
               <button onClick={() => { if (!isLoggedIn) { setToast({ type: "err", msg: "로그인 필요" }); return; } setCreatePartyOpen(true); }} style={{ ...btn, padding: "10px" }}>파티 만들기</button>
             </div>
+
+            {partyId && (
+              <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>현재 자리 / 채널</div>
+                <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: channel ? "#74c0fc" : "#ff8787" }}>
+                  {channel || "채널 미설정"}
+                </div>
+                {!channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -893,6 +907,10 @@ export default function Page() {
                 <div style={formRow}><div style={label}>직업</div><select style={input} value={job} onChange={(e) => setJob(e.target.value as Job)}><option value="전사">전사</option><option value="도적">도적</option><option value="궁수">궁수</option><option value="마법사">마법사</option></select></div>
               </div>
               <div style={formRow}><div style={label}>스공</div><input style={input} value={String(power)} onChange={(e) => setPower(clampInt(e.target.value, 0, 9999999))} /></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <input type="checkbox" checked={isCaptain} onChange={e => setIsCaptain(e.target.checked)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                <div style={{ fontSize: 13, fontWeight: 700 }}>선장님이신가요? (위바협2 전용)</div>
+              </div>
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8 }}>
                 <div style={label}>블랙리스트</div>
                 <div style={{ display: "flex", gap: 6 }}>
