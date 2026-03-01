@@ -886,9 +886,9 @@ export default function Page() {
         <div onClick={() => setSettingsOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.60)", display: "grid", placeItems: "center", zIndex: 90 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: "min(480px, 96vw)", borderRadius: 14, background: "rgba(18,18,22,0.98)", padding: 14, border: "1px solid rgba(255,255,255,0.12)" }}>
             <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 10 }}>설정</div>
-            <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "grid", gap: 14 }}>
               <div style={formRow}><div style={label}>닉네임</div><input style={input} value={nickname} onChange={(e) => setNickname(e.target.value)} /></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div style={formRow}><div style={label}>레벨</div><input style={input} value={String(level)} onChange={(e) => setLevel(clampInt(e.target.value, 1, 300))} /></div>
                 <div style={formRow}><div style={label}>직업</div><select style={input} value={job} onChange={(e) => setJob(e.target.value as Job)}><option value="전사">전사</option><option value="도적">도적</option><option value="궁수">궁수</option><option value="마법사">마법사</option></select></div>
               </div>
@@ -930,6 +930,7 @@ export default function Page() {
       )}
 
       <style>{`
+        * { box-sizing: border-box; }
         .shell { display: grid; grid-template-columns: 240px 1fr 320px; grid-template-rows: 60px 1fr auto; gap: 10px; padding: 10px; max-width: 1600px; margin: 0 auto; }
         .discord-aside { grid-column: 1; grid-row: 1 / span 3; }
         .search-header { grid-column: 2; grid-row: 1; }

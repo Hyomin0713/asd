@@ -60,13 +60,12 @@ export function BuffTable(props: {
         }}>내 정보 저장</button>
       </div>
 
-      <div style={{ padding: 10, display: "grid", gap: 10 }}>
-        {/* 내 버프 입력 칸 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+      <div style={{ padding: 10, display: "grid", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ ...muted, fontSize: 10 }}>심비</div>
             <input 
-              style={{ ...input, padding: "6px", fontSize: "12px" }} 
+              style={{ ...input, padding: "6px", fontSize: "12px", width: "100%", boxSizing: "border-box" }} 
               value={myBuffs.simbi || ""} 
               onChange={e => handleUpdate("simbi", e.target.value)}
               placeholder="0"
@@ -75,7 +74,7 @@ export function BuffTable(props: {
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ ...muted, fontSize: 10 }}>뻥비</div>
             <input 
-              style={{ ...input, padding: "6px", fontSize: "12px" }} 
+              style={{ ...input, padding: "6px", fontSize: "12px", width: "100%", boxSizing: "border-box" }} 
               value={myBuffs.ppeongbi || ""} 
               onChange={e => handleUpdate("ppeongbi", e.target.value)}
               placeholder="0"
@@ -84,7 +83,7 @@ export function BuffTable(props: {
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ ...muted, fontSize: 10 }}>샾비</div>
             <input 
-              style={{ ...input, padding: "6px", fontSize: "12px" }} 
+              style={{ ...input, padding: "6px", fontSize: "12px", width: "100%", boxSizing: "border-box" }} 
               value={myBuffs.syapbi || ""} 
               onChange={e => handleUpdate("syapbi", e.target.value)}
               placeholder="0"
@@ -92,15 +91,14 @@ export function BuffTable(props: {
           </div>
         </div>
 
-        {/* 전체 멤버 리스트 */}
         <div style={{ display: "grid", gap: 6, marginTop: 4 }}>
           {members.map(m => {
             const mIsOwner = party.ownerId === m.userId;
             const mIsMe = me.user.id === m.userId;
             return (
-              <div key={m.userId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ fontWeight: 800, fontSize: "13px", color: mIsMe ? "#74c0fc" : "#eee" }}>
+              <div key={m.userId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "rgba(255,255,255,0.03)", borderRadius: "8px", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: "13px", color: mIsMe ? "#74c0fc" : "#eee", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {mIsOwner && "👑 "}{m.name}
                   </div>
                   {isOwner && !mIsMe && (
@@ -108,17 +106,17 @@ export function BuffTable(props: {
                       onClick={() => {
                         if (window.confirm(`${m.name}님에게 파티장을 넘길까요?`)) onTransferOwner(m.userId);
                       }}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", padding: 0 }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", padding: 0, flexShrink: 0 }}
                       title="파티장 양도"
                     >
                       🔄
                     </button>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  <span style={{ ...chip, fontSize: "10px", padding: "2px 5px", opacity: m.buffs?.simbi ? 1 : 0.3 }}>심 {m.buffs?.simbi || 0}</span>
-                  <span style={{ ...chip, fontSize: "10px", padding: "2px 5px", opacity: m.buffs?.ppeongbi ? 1 : 0.3 }}>뻥 {m.buffs?.ppeongbi || 0}</span>
-                  <span style={{ ...chip, fontSize: "10px", padding: "2px 5px", opacity: m.buffs?.syapbi ? 1 : 0.3 }}>샾 {m.buffs?.syapbi || 0}</span>
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  <span style={{ ...chip, fontSize: "10px", padding: "2px 5px", opacity: m.buffs?.simbi ? 1 : 0.3, minWidth: "35px", textAlign: "center" }}>심 {m.buffs?.simbi || 0}</span>
+                  <span style={{ ...chip, fontSize: "10px", padding: "2px 5px", opacity: m.buffs?.ppeongbi ? 1 : 0.3, minWidth: "35px", textAlign: "center" }}>뻥 {m.buffs?.ppeongbi || 0}</span>
+                  <span style={{ ...chip, fontSize: "10px", padding: "2px 5px", opacity: m.buffs?.syapbi ? 1 : 0.3, minWidth: "35px", textAlign: "center" }}>샾 {m.buffs?.syapbi || 0}</span>
                 </div>
               </div>
             );
