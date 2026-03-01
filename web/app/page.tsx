@@ -476,6 +476,7 @@ export default function Page() {
   };
 
   const joinPartyDirect = async (targetPartyId: string, lockPassword?: string) => {
+    if (!validateProfile()) return;
     if (!targetPartyId || isJoining) return;
     setIsJoining(true);
     try {
@@ -520,6 +521,15 @@ export default function Page() {
     }
   };
 
+  const validateProfile = () => {
+    if (!nickname.trim() || nickname === "User" || !level || !job || power === 12000) {
+      alert("프로필 정보(닉네임, 레벨, 직업, 스공)를 먼저 설정해 주세요.");
+      setSettingsOpen(true);
+      return false;
+    }
+    return true;
+  };
+
   const refreshParties = async () => {
     try {
       const res = await fetch(apiUrl("/api/parties"));
@@ -529,6 +539,10 @@ export default function Page() {
   };
 
   const createPartyManual = async () => {
+    if (!validateProfile()) return;
+    if (selectedId === "octopus") {
+      if (!window.confirm("선장님이신가요? (위바협2는 선장님만 파티 생성이 권장됩니다)")) return;
+    }
     if (isJoining) return;
     setIsJoining(true);
     try {
@@ -621,6 +635,7 @@ export default function Page() {
   }
 
   function startMatching() {
+    if (!validateProfile()) return;
     if (!selected || matchState === "searching") return;
     if (party && me) {
       const isOwner = party.ownerId === me.user.id;
