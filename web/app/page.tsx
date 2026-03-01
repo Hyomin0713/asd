@@ -1030,7 +1030,6 @@ export default function Page() {
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
               <div style={{ fontWeight: 800 }}>블랙리스트</div>
-              <div style={muted}>서로 블랙이면 매칭 제외</div>
             </div>
 
             <div style={{ display: "flex", gap: 8 }}>
@@ -1096,10 +1095,6 @@ export default function Page() {
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ fontWeight: 800 }}>매칭 상태</div>
 
-            {matchState === "idle" && (
-              <div style={muted}>큐에 참가하면 “{`매칭중${".".repeat(dotTick)}`}” 표시 후 채널을 안내합니다.</div>
-            )}
-
             {matchState === "searching" && (
               <div style={{ display: "grid", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1153,8 +1148,22 @@ export default function Page() {
             )}
 
             {matchState === "matched" && (
-              <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ display: "grid", gap: 12 }}>
                 <div style={{ fontWeight: 900, fontSize: 16 }}>매칭완료!</div>
+                
+                {/* Matched Party Members Info */}
+                <div style={{ display: "grid", gap: 8 }}>
+                  {(party?.members || []).map((m: any) => (
+                    <div key={m.userId || m.id} style={{ ...listCard, padding: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontWeight: 800 }}>{m.name || m.displayName}</div>
+                        <div style={muted}>Lv.{m.level} {m.job}</div>
+                      </div>
+                      <div style={{ ...muted, marginTop: 4 }}>스공: {fmtNumber(m.power)}</div>
+                    </div>
+                  ))}
+                </div>
+
                 {channel ? (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <div style={{ ...chip, background: "rgba(120,200,255,0.12)", borderColor: "rgba(120,200,255,0.32)" }}>채널</div>
@@ -1297,24 +1306,6 @@ export default function Page() {
             )}
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6 }}>
-              {matchState === "idle" && (
-                <button
-                  onClick={startMatching}
-                  style={{
-                    flex: 1,
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    background: "rgba(120,200,255,0.14)",
-                    color: "#e6e8ee",
-                    padding: "12px 12px",
-                    borderRadius: 12,
-                    cursor: "pointer",
-                    fontWeight: 900,
-                  }}
-                >
-                  큐 참가
-                </button>
-              )}
-
               {matchState === "searching" && (
                 <button
                   onClick={leaveQueue}
@@ -1370,7 +1361,6 @@ export default function Page() {
             </div>
 
             <div style={{ ...muted, marginTop: 8 }}>
-              {matchState === "idle" && "큐 참가하면 매칭이 시작됩니다."}
               {matchState === "searching" &&
                 (() => {
                   const n = queueCounts[selectedId] ?? 0;
