@@ -399,10 +399,10 @@ export default function Page() {
 
   useEffect(() => {
     const sck = socketRef.current;
-    if (!sck || !partyId) return;
+    if (!sck || !sockConnected || !partyId) return;
     safeLocalSet("mlq.partyId", partyId);
     sck.emit("joinPartyRoom", { partyId });
-  }, [partyId]);
+  }, [partyId, sockConnected]);
 
   useEffect(() => {
     const sck = socketRef.current;

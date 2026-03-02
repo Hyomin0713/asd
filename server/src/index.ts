@@ -482,13 +482,22 @@ const socketToUserId = new Map<string, string>();
 function cleanupPartyMembership(userId: string) {
   try {
     const cur = QUEUE.get(userId);
-    const pid = cur?.partyId;
+    let pid = cur?.partyId;
+
+    if (!pid) {
+      const parties = STORE.listParties();
+      for (const sp of parties) {
+        const full = STORE.getParty(sp.id);
+        if (full?.members.some(m => m.userId === userId)) {
+          pid = sp.id;
+          break;
+        }
+      }
+    }
+
     if (!pid) return;
     const before = STORE.getParty(pid);
     const out = STORE.leaveParty({ partyId: pid, userId });
-
-
-
 
     const p = out ?? STORE.getParty(pid);
     const wasAuto = !!before?.title?.startsWith("사냥터 ");
@@ -506,7 +515,6 @@ function cleanupPartyMembership(userId: string) {
     }
     broadcastParty(pid);
   } catch {
-
   }
 }
 
@@ -789,8 +797,10 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     const uid = socketToUserId.get(socket.id);
     if (uid) {
-      cleanupPartyMembership(uid);
-      QUEUE.leave(uid);
+      const q = QUEUE.get(uid);
+      if (q && q.state === "searching") {
+        QUEUE.leave(uid);
+      }
       socketToUserId.delete(socket.id);
     }
 
