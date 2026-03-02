@@ -372,14 +372,18 @@ export default function Page() {
       if (!p) return;
       console.log("[socket] queue:status", p);
       setMatchState(p.state);
-      setChannel(p.channel ?? "");
+      
+      // 채널 정보가 있을 때만 업데이트 (빈 값으로 덮어쓰기 방지)
+      if (p.channel) {
+        setChannel(p.channel);
+      }
+      
       setIsLeader(!!p.isLeader);
       setChannelReady(!!p.channelReady);
       
       if (p.partyId) {
         updatePartyId(p.partyId);
       } else if (p.state === "idle") {
-        // ID가 비어서 왔을 때, 로컬 스토리지에 있는걸 한 번 더 시도
         const saved = safeLocalGet("mlq.partyId", "");
         if (saved) {
           updatePartyId(saved);
@@ -391,9 +395,15 @@ export default function Page() {
 
     sck.on("partyUpdated", (payload: any) => {
       if (!payload?.party) return;
-      console.log("[socket] partyUpdated received:", payload.party);
+      
+      // 내 파티 정보인지 확인 (중요!)
+      const myPid = partyIdRef.current;
+      if (payload.party.id !== myPid) {
+        return; 
+      }
+
+      console.log("[socket] ✅ My party updated:", payload.party);
       setParty(payload.party);
-      // 서버에서 채널 정보가 오면 즉시 상태 반영
       if (payload.party.channel) {
         setChannel(payload.party.channel);
       }
