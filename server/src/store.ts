@@ -109,7 +109,12 @@ class PartyStore {
   }
 
   getParty(id: string) {
-    return this.parties.get(id) ?? null;
+    const p = this.parties.get(id);
+    if (p) {
+      if (!p.messages) p.messages = [];
+      if (p.channel === undefined) p.channel = null;
+    }
+    return p ?? null;
   }
 
   getPartyByUserId(userId: string) {

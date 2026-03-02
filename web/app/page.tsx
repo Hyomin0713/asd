@@ -395,17 +395,15 @@ export default function Page() {
 
     sck.on("partyUpdated", (payload: any) => {
       if (!payload?.party) return;
+      console.log("[socket] ✅ PARTY_UPDATED RECEIVED:", payload.party);
       
-      // 내 파티 정보인지 확인 (중요!)
-      const myPid = partyIdRef.current;
-      if (payload.party.id !== myPid) {
-        return; 
-      }
-
-      console.log("[socket] ✅ My party updated:", payload.party);
-      setParty(payload.party);
-      if (payload.party.channel) {
-        setChannel(payload.party.channel);
+      // 내 파티 정보인지 한 번 더 확인하되, 로그는 무조건 남김
+      const myPid = partyIdRef.current || safeLocalGet("mlq.partyId", "");
+      if (payload.party.id === myPid) {
+        setParty(payload.party);
+        if (payload.party.channel) {
+          setChannel(payload.party.channel);
+        }
       }
     });
 
@@ -890,24 +888,15 @@ export default function Page() {
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)" }}>파티 채팅</div>
                   <div ref={chatScrollRef} style={{ height: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, paddingRight: 4 }}>
-                    {((party?.messages || []).length === 0 && chatMessages.length === 0) && <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>}
-                    {(party?.messages || []).map((c: any, i: number) => (
-                      <div key={`p-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
+                    {(!party?.messages || party.messages.length === 0) && (
+                      <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>
+                    )}
+                    {party?.messages?.map((c: any, i: number) => (
+                      <div key={`${c.time}-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
                         <span style={{ fontWeight: 800, color: "#74c0fc" }}>{c.sender}: </span>
-                        <span>{c.msg}</span>
+                        <span style={{ color: "#e6e8ee" }}>{c.msg}</span>
                       </div>
                     ))}
-                    {/* 실시간 소켓 메시지 보완 (중복 방지 로직은 생략하거나 추후 보강) */}
-                    {chatMessages.map((c, i) => {
-                      // 이미 party.messages에 있는 메시지라면 스킵 (시간으로 대충 판별)
-                      if (party?.messages?.some((pm: any) => pm.time === c.time && pm.msg === c.msg)) return null;
-                      return (
-                        <div key={`s-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
-                          <span style={{ fontWeight: 800, color: "#74c0fc" }}>{c.sender}: </span>
-                          <span>{c.msg}</span>
-                        </div>
-                      );
-                    })}
                   </div>
                   <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
                     <input 
@@ -1005,9 +994,10 @@ export default function Page() {
 
                 <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>현재 자리 / 채널</div>
-                  <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: (party?.channel || channel) ? "#74c0fc" : "#ff8787" }}>
-                    {party?.channel || channel || "채널 미설정"}
-                  </div>                  {!channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
+                  <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: (party?.channel) ? "#74c0fc" : "#ff8787" }}>
+                    {party?.channel || "채널 미설정"}
+                  </div>
+                  {!party?.channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
                 </div>
               </>
             )}
