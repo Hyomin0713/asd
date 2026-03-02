@@ -329,7 +329,8 @@ export default function Page() {
   const sendChat = () => {
     const sck = socketRef.current;
     if (!sck || !partyId || !chatInput.trim()) return;
-    const msgData = { partyId, sender: nickname || discordName, msg: chatInput.trim() };
+    const finalSender = nickname.trim() || discordName || "익명";
+    const msgData = { partyId, sender: finalSender, msg: chatInput.trim() };
     console.log("[socket] emitting party:sendChat", msgData);
     sck.emit("party:sendChat", msgData);
     setChatInput("");
@@ -377,6 +378,13 @@ export default function Page() {
       console.log("[socket] party:message", payload);
       if (payload?.msg) {
         setChatMessages(prev => [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-50));
+      }
+    });
+
+    sck.on("party:error", (payload: any) => {
+      console.error("[socket] party:error", payload);
+      if (payload?.message) {
+        setToast({ type: "err", msg: payload.message });
       }
     });
 
