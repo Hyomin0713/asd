@@ -554,6 +554,33 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("party:sendChat", (payload: { partyId: string; sender: string; msg: string }) => {
+    const u = requireSocketUser(socket);
+    if (!u) return;
+    const { partyId, sender, msg } = payload;
+    if (!partyId || !msg.trim()) return;
+
+    const p = STORE.getParty(partyId);
+    if (!p) return;
+    if (!p.members.some((m) => m.userId === u.id)) return;
+
+    io.to(partyId).emit("party:message", { sender: sender || u.global_name || u.username, msg: msg.trim() });
+  });
+
+  socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {
+    const u = requireSocketUser(socket);
+    if (!u) return;
+    const { partyId, channel } = payload;
+    if (!partyId || !channel) return;
+
+    try {
+      STORE.setChannel({ partyId, userId: u.id, channel });
+      broadcastParty(partyId);
+    } catch {
+      socket.emit("queue:toast", { type: "error", message: "채널 설정 실패" });
+    }
+  });
+
 
   function ensureLoggedIn() {
     const u = requireSocketUser(socket);
@@ -730,6 +757,15 @@ io.on("connection", (socket) => {
       emitQueueStatus(u.id);
       return;
     }
+
+    const first = r.members[0];
+    if (first?.partyId) {
+      try {
+        STORE.setChannel({ partyId: first.partyId, userId: u.id, channel });
+        broadcastParty(first.partyId);
+      } catch {}
+    }
+
     for (const m of r.members) {
       emitQueueStatus(m.userId, m.socketId);
     }

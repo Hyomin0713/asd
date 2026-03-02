@@ -41,16 +41,7 @@ type HuntingGround = {
   note: string;
 };
 
-const GROUNDS: HuntingGround[] = [
-  {
-    id: "octopus",
-    name: "위험한 바다의 협곡2",
-    area: "아쿠아리움",
-    recommendedLevel: "Lv. 92+",
-    tags: ["위바협", "오징어", "원양어선"],
-    note: "원격 폭업의 성지",
-  },
-];
+const GROUNDS: HuntingGround[] = [];
 
 function clampInt(v: string, min: number, max: number): number {
   const n = Math.floor(Number(v));
@@ -181,7 +172,7 @@ export default function Page() {
   }, [nickname, level, job, power, isCaptain]);
 
   const [blackInput, setBlackInput] = useState("");
-  const [blacklist, setBlacklist] = useState<string[]>(["포켓몬성능"]);
+  const [blacklist, setBlacklist] = useState<string[]>([]);
 
   const [matchState, setMatchState] = useState<MatchState>("idle");
   const [channel, setChannel] = useState<string>("");
@@ -636,8 +627,17 @@ export default function Page() {
 
   function setChannelByLeader() {
     const sck = socketRef.current;
-    if (!sck || !isLeader || matchState !== "matched") return;
-    sck.emit("queue:setChannel", { letter: channelLetter, num: channelNum });
+    if (!sck) return;
+    const ch = `${channelLetter}-${channelNum}`;
+    
+    if (partyId) {
+      // 파티 상태일 때 채널 설정
+      sck.emit("party:setChannel", { partyId, channel: ch });
+    } else if (isLeader && matchState === "matched") {
+      // 매칭 직후 상태일 때 채널 설정
+      sck.emit("queue:setChannel", { letter: channelLetter, num: channelNum });
+    }
+    setChannel("");
   }
 
   function onSelectGround(id: string) {

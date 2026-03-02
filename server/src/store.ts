@@ -16,6 +16,7 @@ export type Party = {
   ownerId: string;
   groundId: string | null;
   groundName: string | null;
+  channel: string | null;
   isLocked: boolean;
   lockPasswordHash: string | null;
   members: PartyMember[];
@@ -63,6 +64,7 @@ class PartyStore {
       ownerId: args.ownerId,
       groundId: (args.groundId ?? null),
       groundName: (args.groundName ?? null),
+      channel: null,
       isLocked: false,
       lockPasswordHash: null,
       members: [
@@ -95,6 +97,7 @@ class PartyStore {
       ownerId: p.ownerId,
       groundId: p.groundId,
       groundName: p.groundName,
+      channel: p.channel,
       isLocked: p.isLocked,
       memberCount: p.members.length,
       updatedAt: p.updatedAt
@@ -273,6 +276,15 @@ class PartyStore {
     const out = this.setLockInternal(args.partyId, args.isLocked, args.lockPassword ?? null);
     if (!out) throw new Error("NOT_FOUND");
     return out;
+  }
+
+  setChannel(args: { partyId: string; userId: string; channel: string }) {
+    const p = this.getParty(args.partyId);
+    if (!p) throw new Error("NOT_FOUND");
+    if (p.ownerId !== args.userId) throw new Error("NOT_OWNER");
+    p.channel = args.channel;
+    p.updatedAt = Date.now();
+    return p;
   }
 
 
