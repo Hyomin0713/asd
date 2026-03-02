@@ -565,7 +565,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("party:sendChat", (payload: any) => {
-    // 보안/검증을 모두 생략하고 즉시 전역 브로드캐스트 (최우선 작동 보장)
     const chatPayload = { 
       partyId: payload.partyId,
       sender: payload.sender || "익명", 
@@ -573,33 +572,30 @@ io.on("connection", (socket) => {
       time: Date.now() 
     };
     
-    console.log(`[socket] FORCE BROADCAST:`, chatPayload);
-    
-    // 1. 전역 모든 소켓에 전송
+    console.log(`[socket] CHAT_EMIT:`, chatPayload);
+    // 전체 공지로 전송 (가장 확실함)
     io.emit("party:message", chatPayload);
-    // 2. 혹시 모를 누락을 위해 보완 전송
-    socket.broadcast.emit("party:message", chatPayload);
   });
 
   socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {
-    const u = requireSocketUser(socket);
-    const uid = u?.id || socketToUserId.get(socket.id);
-    
-    if (!uid) {
-      console.log(`[socket] setChannel failed: no user for socket ${socket.id}`);
-      return;
-    }
-    
     const { partyId, channel } = payload;
     if (!partyId || !channel) return;
 
     try {
-      console.log(`[socket] setting channel for party ${partyId}: ${channel}`);
-      STORE.setChannel({ partyId, userId: uid, channel });
-      broadcastParty(partyId);
+      console.log(`[socket] FORCE_SET_CHANNEL: [${partyId}] ${channel}`);
+      
+      // STORE 업데이트
+      const p = STORE.getParty(partyId);
+      if (p) {
+        p.channel = channel;
+        p.updatedAt = Date.now();
+      }
+
+      // 전체 공지로 알림
+      io.emit("partyUpdated", { party: p || { id: partyId, channel } });
+      broadcastParties(); // 로비 목록 업데이트
     } catch (e) {
       console.error(`[socket] setChannel error:`, e);
-      socket.emit("queue:toast", { type: "error", message: "채널 설정 실패" });
     }
   });
 

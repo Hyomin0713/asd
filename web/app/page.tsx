@@ -673,12 +673,13 @@ export default function Page() {
     const sck = socketRef.current;
     if (!sck) return;
     const ch = `${channelLetter}-${channelNum}`;
-    
-    if (partyId) {
-      // 파티 상태일 때 채널 설정
-      sck.emit("party:setChannel", { partyId, channel: ch });
+    const pid = partyId || safeLocalGet("mlq.partyId", "");
+
+    console.log(`[socket] CONFIRMING CHANNEL: partyId=${pid}, channel=${ch}`);
+
+    if (pid) {
+      sck.emit("party:setChannel", { partyId: pid, channel: ch });
     } else if (isLeader && matchState === "matched") {
-      // 매칭 직후 상태일 때 채널 설정
       sck.emit("queue:setChannel", { letter: channelLetter, num: channelNum });
     }
     setChannel("");
