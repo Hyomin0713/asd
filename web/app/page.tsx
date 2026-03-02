@@ -179,6 +179,14 @@ export default function Page() {
   const [isLeader, setIsLeader] = useState(false);
   const [channelReady, setChannelReady] = useState(false);
   const [partyId, setPartyId] = useState<string>("");
+  const partyIdRef = useRef<string>("");
+
+  const updatePartyId = (id: string) => {
+    setPartyId(id);
+    partyIdRef.current = id;
+    if (id) safeLocalSet("mlq.partyId", id);
+  };
+
   const [party, setParty] = useState<any | null>(null);
   const [isJoining, setIsJoining] = useState(false);
 
@@ -335,9 +343,10 @@ export default function Page() {
 
   const sendChat = () => {
     const sck = socketRef.current;
-    if (!sck || !partyId || !chatInput.trim()) return;
+    const pid = partyIdRef.current;
+    if (!sck || !pid || !chatInput.trim()) return;
     const finalSender = nickname.trim() || discordName || "익명";
-    const msgData = { partyId, sender: finalSender, msg: chatInput.trim() };
+    const msgData = { partyId: pid, sender: finalSender, msg: chatInput.trim() };
     console.log("[socket] emitting party:sendChat", msgData);
     sck.emit("party:sendChat", msgData);
     setChatInput("");
@@ -363,12 +372,17 @@ export default function Page() {
       setChannel(p.channel ?? "");
       setIsLeader(!!p.isLeader);
       setChannelReady(!!p.channelReady);
+      
       if (p.partyId) {
-        setPartyId(p.partyId);
-        safeLocalSet("mlq.partyId", p.partyId);
+        updatePartyId(p.partyId);
       } else if (p.state === "idle") {
-        setPartyId("");
-        safeLocalSet("mlq.partyId", "");
+        // ID가 비어서 왔을 때, 로컬 스토리지에 있는걸 한 번 더 시도
+        const saved = safeLocalGet("mlq.partyId", "");
+        if (saved) {
+          updatePartyId(saved);
+        } else {
+          updatePartyId("");
+        }
       }
     });
 
@@ -388,11 +402,9 @@ export default function Page() {
     sck.on("party:message", (payload: any) => {
       console.log("🔴🔴🔴 [socket] party:message RECEIVED", payload);
       
-      // 메시지의 partyId가 현재 내가 속한 파티 ID와 일치할 때만 표시
-      // (서버에서 전역으로 쏘는 경우를 대비한 안전 장치)
-      const currentPid = partyId || safeLocalGet("mlq.partyId", "");
+      const currentPid = partyIdRef.current;
       if (payload?.partyId && payload.partyId !== currentPid) {
-        console.log(`[socket] Ignored message from other party: ${payload.partyId}`);
+        console.log(`[socket] Ignored message from other party: expected ${currentPid}, got ${payload.partyId}`);
         return;
       }
 
@@ -434,7 +446,7 @@ export default function Page() {
 
   useEffect(() => {
     const saved = safeLocalGet<string>("mlq.partyId", "") as string;
-    if (saved && !partyId) setPartyId(saved);
+    if (saved && !partyIdRef.current) updatePartyId(saved);
   }, []);
 
   useEffect(() => {
@@ -627,12 +639,10 @@ export default function Page() {
       const data = await res.json();
       const pid = String(data?.party?.id ?? "");
       if (!pid) throw new Error("INVALID_RESPONSE");
-      setPartyId(pid);
-      safeLocalSet("mlq.partyId", pid);
+      updatePartyId(pid);
       setCreateTitle("");
       setCreatePassword("");
-      setCreateLocked(false);
-      setCreatePartyOpen(false);
+      setCreateLocked(false);      setCreatePartyOpen(false);
       setToast({ type: "ok", msg: "파티가 생성되었습니다." });
     } catch (e: any) {
       setToast({ type: "err", msg: `파티 생성 실패: ${e?.message ?? e}` });
@@ -913,8 +923,9 @@ export default function Page() {
                   <button 
                     onClick={async () => {
                       if (window.confirm("파티에서 나갈까요?")) {
-                        await leavePartyOnServer(partyId);
-                        setPartyId("");
+                        const pid = partyIdRef.current;
+                        if (pid) await leavePartyOnServer(pid);
+                        updatePartyId("");
                         setParty(null);
                       }
                     }} 

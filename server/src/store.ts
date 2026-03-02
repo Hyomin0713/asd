@@ -108,6 +108,13 @@ class PartyStore {
     return this.parties.get(id) ?? null;
   }
 
+  getPartyByUserId(userId: string) {
+    for (const p of this.parties.values()) {
+      if (p.members.some((m) => m.userId === userId)) return p;
+    }
+    return null;
+  }
+
   deleteParty(id: string) {
     this.parties.delete(id);
   }

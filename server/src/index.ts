@@ -121,7 +121,7 @@ function broadcastParties() {
 }
 function broadcastParty(partyId: string) {
   const party = STORE.getParty(partyId);
-  if (party) io.to(partyId).emit("partyUpdated", { party });
+  if (party) io.emit("partyUpdated", { party });
   broadcastParties();
 }
 
@@ -170,153 +170,63 @@ function requireAuth(req: express.Request, res: express.Response): { user: Disco
 
 app.get("/health", (_req, res) => res.json({ ok: true, now: Date.now() }));
 
-
-app.get("/auth/discord", (_req, res) => {
-  if (!DISCORD_CLIENT_ID) return res.status(500).send("DISCORD_CLIENT_ID not set");
-  const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    redirect_uri: DISCORD_REDIRECT_URI,
-    response_type: "code",
-    scope: "identify"
-  });
-  res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
-});
-
-app.get("/auth/discord/callback", rateLimit({ windowMs: 60_000, max: 30 }), async (req, res) => {
-  try {
-    const code = String(req.query.code ?? "");
-    if (!code) return res.status(400).send("Missing code");
-
-    const body = new URLSearchParams({
-      client_id: DISCORD_CLIENT_ID,
-      client_secret: DISCORD_CLIENT_SECRET,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: DISCORD_REDIRECT_URI
-    });
-
-    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body
-    });
-    if (!tokenRes.ok) return res.status(500).send("Token exchange failed");
-
-    const tokenJson: any = await tokenRes.json();
-    const accessToken = tokenJson.access_token as string;
-
-    const meRes = await fetch("https://discord.com/api/users/@me", {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    if (!meRes.ok) return res.status(500).send("Fetch user failed");
-
-    const me: any = await meRes.json();
-
-    const user: DiscordUser = {
-      id: String(me.id),
-      username: String(me.username),
-      global_name: me.global_name ?? null,
-      avatar: me.avatar ?? null
-    };
-
-    const s = newSession(user);
-
-
-    setSessionCookie(res, s.sessionId);
-
-
-
-
-    res.redirect(`/#sid=${encodeURIComponent(s.sessionId)}`);
-  } catch (e) {
-    console.error(e);
-    res.status(500).send("OAuth error");
-  }
-});
-
-
-
-
-
-
-
-app.get("/api/profile", (req, res) => {
-  const auth = requireAuth(req, res);
-  if (!auth) return;
-
-  const u = auth.user;
-  const displayName = (u.global_name ?? u.username) || u.username;
-  const saved = USERS.upsert(u.id, { displayName })!;
-  return res.json({ ok: true, profile: saved });
-});
-
-app.put("/api/profile", express.json(), (req, res) => {
-  const auth = requireAuth(req, res);
-  if (!auth) return;
-
-  const u = auth.user;
-  const displayName = (u.global_name ?? u.username) || u.username;
-  const body = req.body ?? {};
-  const next = USERS.upsert(u.id, {
-    displayName,
-    level: body.level,
-    job: body.job,
-    power: body.power,
-    blacklist: body.blacklist,
-  });
-  return res.json({ ok: true, profile: next });
-});
-
-app.get("/api/queue/status", (req, res) => {
-  const auth = requireAuth(req, res);
-  if (!auth) return;
-  const cur = QUEUE.get(auth.user.id);
-  if (!cur) return res.json({ ok: true, status: { state: "idle" } });
-  return res.json({ ok: true, status: { state: cur.state, channel: cur.channel, huntingGroundId: cur.huntingGroundId } });
-});
-
-
 app.get("/api/me", (req, res) => {
-  const auth = requireAuth(req, res);
-  if (!auth) return;
-
-  setSessionCookie(res, auth.sessionId);
-
-  res.json({ user: auth.user, profile: USERS.get(auth.user.id) ?? null });
+  const sid = extractSessionId(req);
+  const s = getSession(sid);
+  if (!s) return res.status(401).json({ error: "UNAUTHORIZED" });
+  const up = USERS.get(s.user.id);
+  res.json({ user: s.user, profile: up });
 });
 
 app.post("/api/logout", (req, res) => {
-  const cookies = parseCookies(req.headers.cookie);
-  const sid = cookies["ml_session"];
+  const sid = extractSessionId(req);
   if (sid) deleteSession(sid);
-  res.setHeader(
-    "Set-Cookie",
-    cookieSerialize("ml_session", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0
-    })
-  );
   res.json({ ok: true });
 });
 
+app.get("/auth/discord", (_req, res) => {
+  const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+    DISCORD_REDIRECT_URI
+  )}&response_type=code&scope=identify`;
+  res.redirect(url);
+});
 
-app.post("/api/profile", (req, res) => {
-  const auth = requireAuth(req, res);
-  if (!auth) return;
+app.get("/auth/discord/callback", async (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.status(400).send("Missing code");
+
   try {
-    const body = profileSchema.parse(req.body);
-    const p = PROFILES.upsert(auth.user.id, body.displayName);
-    res.json({ profile: p });
-  } catch {
-    res.status(400).json({ error: "INVALID_BODY" });
+    const tRes = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      body: new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type: "authorization_code",
+        code: String(code),
+        redirect_uri: DISCORD_REDIRECT_URI
+      }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
+    const tData = (await tRes.json()) as any;
+    if (tData.error) throw new Error(tData.error_description);
+
+    const uRes = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${tData.access_token}` }
+    });
+    const uData = (await uRes.json()) as DiscordUser;
+
+    const session = newSession(uData);
+    setSessionCookie(res, session.sessionId);
+
+    res.send(`<html><script>window.location.href="/#sid=${encodeURIComponent(session.sessionId)}";</script></html>`);
+  } catch (e: any) {
+    res.status(500).send(e.message);
   }
 });
 
-
-app.get("/api/parties", (_req, res) => res.json({ parties: STORE.listParties() }));
+app.get("/api/parties", (_req, res) => {
+  res.json({ parties: STORE.listParties() });
+});
 
 app.post("/api/party", (req, res) => {
   const auth = requireAuth(req, res);
@@ -328,17 +238,17 @@ app.post("/api/party", (req, res) => {
       title: body.title,
       ownerId: auth.user.id,
       ownerName: auth.user.global_name ?? auth.user.username,
+      lockPassword: body.lockPassword,
+      groundId: body.groundId,
+      groundName: body.groundName,
       ownerLevel: up?.level ?? 1,
       ownerJob: (up?.job as any) ?? "전사",
-      ownerPower: up?.power ?? 0,
-      lockPassword: body.lockPassword ?? null,
-      groundId: body.groundId ?? null,
-      groundName: body.groundName ?? null
+      ownerPower: up?.power ?? 0
     });
     broadcastParties();
     res.json({ party });
-  } catch {
-    res.status(400).json({ error: "INVALID_BODY" });
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message ?? "CREATE_FAILED" });
   }
 });
 
@@ -378,23 +288,26 @@ app.post("/api/party/rejoin", (req, res) => {
       name: auth.user.global_name ?? auth.user.username,
       level: up?.level ?? 1,
       job: (up?.job as any) ?? "전사",
-      power: up?.power ?? 0,
+      power: up?.power ?? 0
     });
     broadcastParty(body.partyId);
     res.json({ party });
-  } catch {
-    res.status(400).json({ error: "REJOIN_FAILED" });
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message ?? "REJOIN_FAILED" });
   }
 });
 
 app.post("/api/party/leave", (req, res) => {
   const auth = requireAuth(req, res);
   if (!auth) return;
-  const partyId = String(req.body?.partyId ?? "");
-  if (!partyId) return res.status(400).json({ error: "MISSING_PARTY_ID" });
-  STORE.leaveParty({ partyId, userId: auth.user.id });
-  broadcastParty(partyId);
-  res.json({ ok: true });
+  try {
+    const body = rejoinSchema.parse(req.body);
+    STORE.leaveParty({ partyId: body.partyId, userId: auth.user.id });
+    broadcastParty(body.partyId);
+    res.json({ ok: true });
+  } catch {
+    res.status(400).json({ error: "LEAVE_FAILED" });
+  }
 });
 
 app.post("/api/party/title", (req, res) => {
@@ -503,13 +416,13 @@ function cleanupPartyMembership(userId: string) {
     const wasAuto = !!before?.title?.startsWith("사냥터 ");
     if (wasAuto && p && p.members.length < 2) {
       STORE.deleteParty(pid);
-      io.to(pid).emit("partyDeleted", { partyId: pid });
+      io.emit("partyDeleted", { partyId: pid });
       broadcastParties();
       return;
     }
 
     if (!p) {
-      io.to(pid).emit("partyDeleted", { partyId: pid });
+      io.emit("partyDeleted", { partyId: pid });
       broadcastParties();
       return;
     }
@@ -529,96 +442,72 @@ function requireSocketUser(socket: import("socket.io").Socket): DiscordUser | nu
     return null;
   }
 }
+
 io.on("connection", (socket) => {
   socket.on("joinPartyRoom", ({ partyId }: { partyId: string }) => {
     if (!partyId) return;
-
-    const party = STORE.getParty(partyId);
-    if (!party) {
-      console.log(`[socket] joinPartyRoom failed: party ${partyId} not found`);
-      socket.emit("partyDeleted", { partyId });
-      return;
-    }
-
     socket.join(partyId);
-    console.log(`[socket] user joined party room: ${partyId}`);
-
-    const u = requireSocketUser(socket);
-    if (u) {
-      socketToUserId.set(socket.id, u.id);
-      STORE.touchMember(partyId, u.id);
-    }
-
-    socket.emit("partyUpdated", { party });
-  });
-
-
-  socket.on("party:heartbeat", ({ partyId }: { partyId: string }) => {
-    const u = requireSocketUser(socket);
-    if (!u) return;
-    if (!partyId) return;
-    const p = STORE.touchMember(String(partyId), u.id);
-    if (p) {
-
-      broadcastParty(String(partyId));
+    const party = STORE.getParty(partyId);
+    if (party) {
+      const u = requireSocketUser(socket);
+      if (u) {
+        socketToUserId.set(socket.id, u.id);
+        STORE.touchMember(partyId, u.id);
+      }
+      socket.emit("partyUpdated", { party });
     }
   });
 
   socket.on("party:sendChat", (payload: any) => {
+    const { partyId, sender, msg } = payload;
+    if (!partyId || !msg || !msg.trim()) return;
     const chatPayload = { 
-      partyId: payload.partyId,
-      sender: payload.sender || "익명", 
-      msg: (payload.msg || "").trim(), 
+      partyId,
+      sender: sender || "익명", 
+      msg: msg.trim(), 
       time: Date.now() 
     };
-    
-    console.log(`[socket] CHAT_EMIT:`, chatPayload);
-    // 전체 공지로 전송 (가장 확실함)
     io.emit("party:message", chatPayload);
   });
 
-  socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {
+  socket.on("party:setChannel", (payload: any) => {
     const { partyId, channel } = payload;
     if (!partyId || !channel) return;
-
-    try {
-      console.log(`[socket] FORCE_SET_CHANNEL: [${partyId}] ${channel}`);
-      
-      // STORE 업데이트
-      const p = STORE.getParty(partyId);
-      if (p) {
-        p.channel = channel;
-        p.updatedAt = Date.now();
-      }
-
-      // 전체 공지로 알림
-      io.emit("partyUpdated", { party: p || { id: partyId, channel } });
-      broadcastParties(); // 로비 목록 업데이트
-    } catch (e) {
-      console.error(`[socket] setChannel error:`, e);
+    const p = STORE.getParty(partyId);
+    if (p) {
+      p.channel = channel;
+      p.updatedAt = Date.now();
+      io.emit("partyUpdated", { party: p });
+      broadcastParties();
     }
   });
 
-
-  function ensureLoggedIn() {
+  socket.on("party:heartbeat", ({ partyId }: { partyId: string }) => {
     const u = requireSocketUser(socket);
-    if (!u) {
-      socket.emit("queue:status", { state: "idle", message: "로그인이 필요합니다." });
-      return null;
+    if (u && partyId) {
+      socketToUserId.set(socket.id, u.id);
+      const p = STORE.touchMember(String(partyId), u.id);
+      if (p) broadcastParty(String(partyId));
     }
-    return u;
-  }
+  });
 
   function emitQueueStatus(uid: string, socketId?: string) {
     const cur = QUEUE.get(uid);
     const emitter = socketId ? io.to(socketId) : socket;
+    const pInStore = STORE.getPartyByUserId(uid);
 
     if (!cur || cur.state === "idle") {
-      (emitter as any).emit("queue:status", { state: "idle" });
+      (emitter as any).emit("queue:status", { 
+        state: "idle", 
+        partyId: pInStore?.id ?? "" 
+      });
       return;
     }
     if (cur.state === "searching") {
-      (emitter as any).emit("queue:status", { state: "searching" });
+      (emitter as any).emit("queue:status", { 
+        state: "searching", 
+        partyId: pInStore?.id ?? cur.partyId ?? "" 
+      });
       return;
     }
     const isLeader = !!cur.leaderId && cur.leaderId === uid;
@@ -627,114 +516,71 @@ io.on("connection", (socket) => {
       channel: cur.channel ?? "",
       isLeader,
       channelReady: !!cur.channel,
-      partyId: cur.partyId ?? "",
+      partyId: pInStore?.id ?? cur.partyId ?? "",
     });
   }
 
   socket.on("queue:hello", async (_p: any) => {
-    const u = ensureLoggedIn();
-    if (!u) return;
-
-    socketToUserId.set(socket.id, u.id);
-
-    emitQueueStatus(u.id);
-
-
-    socket.emit("queue:counts", { counts: QUEUE.getCountsByGround(), avgWaitMs: QUEUE.getAvgWaitByGround() });
+    const u = requireSocketUser(socket);
+    if (u) {
+      socketToUserId.set(socket.id, u.id);
+      emitQueueStatus(u.id);
+      socket.emit("queue:counts", { counts: QUEUE.getCountsByGround(), avgWaitMs: QUEUE.getAvgWaitByGround() });
+    }
   });
 
   socket.on("queue:updateProfile", (p: any) => {
-    const u = ensureLoggedIn();
+    const u = requireSocketUser(socket);
     if (!u) return;
-
     socketToUserId.set(socket.id, u.id);
-
     const displayName = String(p?.displayName ?? (u.global_name ?? u.username) ?? u.username).trim() || (u.global_name ?? u.username);
-    const level = Number(p?.level ?? 1);
-    const job = p?.job ?? "전사";
-    const power = Number(p?.power ?? 0);
-
-
-    USERS.upsert(u.id, { displayName, level, job, power });
-
-
-    const cur = QUEUE.get(u.id);
-    if (cur && cur.state !== "idle") {
-      cur.displayName = displayName;
-      cur.level = Math.max(1, Math.min(300, Math.floor(level) || 1));
-      cur.job = job;
-      cur.power = Math.max(0, Math.min(9_999_999, Math.floor(power) || 0));
-      cur.updatedAt = Date.now();
-    }
-
-
-    const touched = STORE.updateMemberProfile(u.id, { name: displayName, level, job, power });
+    USERS.upsert(u.id, { displayName, level: Number(p?.level ?? 1), job: p?.job ?? "전사", power: Number(p?.power ?? 0) });
+    const touched = STORE.updateMemberProfile(u.id, { name: displayName, level: Number(p?.level), job: p?.job, power: Number(p?.power) });
     for (const pid of touched) broadcastParty(pid);
   });
 
   socket.on("queue:join", (p: any) => {
-    const u = ensureLoggedIn();
+    const u = requireSocketUser(socket);
     if (!u) return;
-
+    socketToUserId.set(socket.id, u.id);
     const huntingGroundId = String(p?.huntingGroundId ?? "").trim();
     if (!huntingGroundId) return;
-
-    socketToUserId.set(socket.id, u.id);
-
     const displayName = (u.global_name ?? u.username) || u.username;
     USERS.upsert(u.id, { displayName, level: Number(p?.level ?? 1), job: p?.job ?? "전사", power: Number(p?.power ?? 0), blacklist: Array.isArray(p?.blacklist) ? p.blacklist : [] });
-
-    const requestedPartyId = String(p?.partyId ?? "").trim();
-    let partyId: string | undefined = undefined;
-    if (requestedPartyId) {
-      const party = STORE.getParty(requestedPartyId);
-      if (party && party.ownerId === u.id) partyId = party.id;
-    }
-
-    const up = QUEUE.upsert(socket.id, huntingGroundId, {
+    
+    QUEUE.upsert(socket.id, huntingGroundId, {
       userId: u.id,
       displayName,
       level: Number(p?.level ?? 1),
       job: p?.job ?? "전사",
       power: Number(p?.power ?? 0),
       blacklist: Array.isArray(p?.blacklist) ? p.blacklist : [],
-      partyId,
     } as any);
 
-    if (!up.ok) return;
-
     socket.emit("queue:status", { state: "searching" });
-
     broadcastQueueCounts();
 
     const matched = QUEUE.tryMatch(huntingGroundId, resolveNameToId);
     if (matched.ok) {
-
       try {
         const leaderId = matched.leaderId;
         const leaderEntry = matched.a.userId === leaderId ? matched.a : matched.b;
         const otherEntry = leaderEntry === matched.a ? matched.b : matched.a;
 
-
-        let partyId = String((leaderEntry as any).partyId ?? "").trim();
-        let party = partyId ? STORE.getParty(partyId) : null;
-        if (!party || party.ownerId !== leaderId || (party.members?.length ?? 0) >= 6) {
-          party = STORE.createParty({
-            ownerId: leaderId,
-            ownerName: leaderEntry.displayName,
-            ownerLevel: Number(leaderEntry.level ?? 1),
-            ownerJob: (leaderEntry.job as any) ?? "전사",
-            ownerPower: Number(leaderEntry.power ?? 0),
-            title: `사냥터 ${huntingGroundId}`,
-            groundId: huntingGroundId,
-            groundName: `사냥터 ${huntingGroundId}`,
-            lockPassword: null
-          });
-          partyId = party.id;
-        }
+        const party = STORE.createParty({
+          ownerId: leaderId,
+          ownerName: leaderEntry.displayName,
+          ownerLevel: Number(leaderEntry.level ?? 1),
+          ownerJob: (leaderEntry.job as any) ?? "전사",
+          ownerPower: Number(leaderEntry.power ?? 0),
+          title: `사냥터 ${huntingGroundId}`,
+          groundId: huntingGroundId,
+          groundName: `사냥터 ${huntingGroundId}`,
+          lockPassword: null
+        });
 
         STORE.joinParty({
-          partyId,
+          partyId: party.id,
           userId: otherEntry.userId,
           name: otherEntry.displayName,
           level: Number(otherEntry.level ?? 1),
@@ -742,65 +588,46 @@ io.on("connection", (socket) => {
           power: Number(otherEntry.power ?? 0),
         });
 
-
-        QUEUE.setPartyForMatch(matched.matchId, partyId);
-
-
-        const sa = io.sockets.sockets.get(matched.a.socketId);
-        const sb = io.sockets.sockets.get(matched.b.socketId);
-        sa?.join(partyId);
-        sb?.join(partyId);
-        broadcastParty(partyId);
+        QUEUE.setPartyForMatch(matched.matchId, party.id);
+        broadcastParty(party.id);
       } catch (e) {
         console.error("[queue] failed to auto-create party", e);
       }
-
       emitQueueStatus(matched.a.userId, matched.a.socketId);
       emitQueueStatus(matched.b.userId, matched.b.socketId);
-
       broadcastQueueCounts();
     }
   });
 
   socket.on("queue:setChannel", (p: any) => {
-    const u = ensureLoggedIn();
+    const u = requireSocketUser(socket);
     if (!u) return;
-
     const letter = String(p?.letter ?? "").toUpperCase().trim();
     const num = String(p?.num ?? "").trim().padStart(3, "0");
     const channel = `${letter}-${num}`;
     const r = QUEUE.setChannelByLeader(u.id, channel);
-    if (!r.ok) {
-      socket.emit("queue:toast", { type: "error", message: "채널 설정 실패" });
-      emitQueueStatus(u.id);
-      return;
+    if (r.ok) {
+      const first = r.members[0];
+      if (first?.partyId) {
+        const p = STORE.getParty(first.partyId);
+        if (p) {
+          p.channel = channel;
+          broadcastParty(p.id);
+        }
+      }
+      for (const m of r.members) emitQueueStatus(m.userId, m.socketId);
+      broadcastQueueCounts();
     }
-
-    const first = r.members[0];
-    if (first?.partyId) {
-      try {
-        STORE.setChannel({ partyId: first.partyId, userId: u.id, channel });
-        broadcastParty(first.partyId);
-      } catch {}
-    }
-
-    for (const m of r.members) {
-      emitQueueStatus(m.userId, m.socketId);
-    }
-
-    broadcastQueueCounts();
   });
 
   socket.on("queue:leave", () => {
-    const u = requireSocketUser(socket);
-    const uid = u?.id ?? socketToUserId.get(socket.id);
+    const uid = socketToUserId.get(socket.id);
     if (uid) {
       cleanupPartyMembership(uid);
       QUEUE.leave(uid);
       socketToUserId.delete(socket.id);
     }
     socket.emit("queue:status", { state: "idle" });
-
     broadcastQueueCounts();
   });
 
@@ -808,15 +635,11 @@ io.on("connection", (socket) => {
     const uid = socketToUserId.get(socket.id);
     if (uid) {
       const q = QUEUE.get(uid);
-      if (q && q.state === "searching") {
-        QUEUE.leave(uid);
-      }
+      if (q && q.state === "searching") QUEUE.leave(uid);
       socketToUserId.delete(socket.id);
     }
-
     broadcastQueueCounts();
   });
-
 });
 
 
@@ -824,41 +647,27 @@ setInterval(() => {
   try {
     const changedPartyIds = STORE.sweepStaleMembers({ memberTtlMs: MEMBER_TTL_MS, partyTtlMs: PARTY_TTL_MS });
     if (changedPartyIds.length) {
-
       for (const pid of changedPartyIds) {
-        if (!STORE.getParty(pid)) {
-          io.to(pid).emit("partyDeleted", { partyId: pid });
-        }
+        if (!STORE.getParty(pid)) io.emit("partyDeleted", { partyId: pid });
       }
       broadcastParties();
     }
-
-
     const cleaned = QUEUE.cleanupDanglingParties((pid) => !!STORE.getParty(pid));
     if (cleaned.length) {
-      for (const e of cleaned) {
-
-        io.to(e.socketId).emit("queue:status", { state: "idle" });
-      }
+      for (const e of cleaned) io.to(e.socketId).emit("queue:status", { state: "idle" });
       broadcastQueueCounts();
     }
-  } catch {
-
-  }
+  } catch {}
 }, 15_000).unref();
 
 const webOut = path.resolve(process.cwd(), "../web/out");
 if (fs.existsSync(webOut)) {
   app.use(express.static(webOut));
   app.get("*", (_req, res) => res.sendFile(path.join(webOut, "index.html")));
-} else {
-  console.warn("[web] ../web/out not found. Did you run `npm run build` at repo root?");
 }
 
 setInterval(() => cleanupSessions(), 60_000).unref();
 
 server.listen(PORT, () => {
   console.log(`[server] listening on ${PORT}`);
-  console.log(`[server] PUBLIC_URL=${PUBLIC_URL}`);
-  console.log(`[server] DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI}`);
 });
