@@ -341,28 +341,18 @@ export default function Page() {
     safeLocalSet("mlq.queueForm", { level, job, power, nickname, blacklist });
   }, [level, job, power, nickname, blacklist]);
 
-  const sendChat = async () => {
+  const sendChat = () => {
     const pid = partyIdRef.current;
     if (!pid || !chatInput.trim()) return;
+    const sck = socketRef.current;
+    if (!sck) return;
+
     const finalSender = nickname.trim() || discordName || "익명";
     const msg = chatInput.trim();
     setChatInput(""); 
 
-    try {
-      const sid = getSid();
-      const res = await fetch(apiUrl("/api/party/chat"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(sid ? { "x-ml-session": sid } : {}) },
-        body: JSON.stringify({ partyId: pid, sender: finalSender, msg }),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        setToast({ type: "err", msg: `채팅 전송 실패: ${err}` });
-      }
-    } catch (e: any) {
-      console.error("[chat] failed to send", e);
-      setToast({ type: "err", msg: "서버 연결 오류로 채팅을 보낼 수 없습니다." });
-    }
+    // 소켓으로 전송
+    sck.emit("party:sendChat", { partyId: pid, sender: finalSender, msg });
   };
 
   useEffect(() => {
@@ -688,27 +678,11 @@ export default function Page() {
   function setChannelByLeader() {
     const pid = partyIdRef.current;
     const ch = `${channelLetter}-${channelNum}`;
-    if (!pid) return;
+    const sck = socketRef.current;
+    if (!pid || !sck) return;
 
-    (async () => {
-      try {
-        const sid = getSid();
-        const res = await fetch(apiUrl("/api/party/channel"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(sid ? { "x-ml-session": sid } : {}) },
-          body: JSON.stringify({ partyId: pid, channel: ch }),
-        });
-        if (!res.ok) {
-          const err = await res.text();
-          setToast({ type: "err", msg: `채널 설정 실패: ${err}` });
-        } else {
-          setToast({ type: "ok", msg: `채널이 ${ch}로 설정되었습니다.` });
-        }
-      } catch (e: any) {
-        console.error("[channel] failed to set", e);
-        setToast({ type: "err", msg: "서버 연결 오류로 채널을 설정할 수 없습니다." });
-      }
-    })();
+    sck.emit("party:setChannel", { partyId: pid, channel: ch });
+    setToast({ type: "info", msg: `채널 설정을 요청했습니다: ${ch}` });
   }
 
   function onSelectGround(id: string) {

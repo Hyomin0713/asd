@@ -285,15 +285,31 @@ io.on("connection", (socket) => {
   socket.on("party:sendChat", (payload: any) => {
     const { partyId, sender, msg } = payload;
     if (!partyId || !msg || !msg.trim()) return;
+    
+    // 서버 메모리에 채팅 저장
     const p = STORE.addMessage(partyId, sender || "익명", msg.trim());
-    if (p) io.emit("partyUpdated", { party: p });
+    
+    // 저장된 파티 정보 전체를 모든 소켓에 공지 (룸 기능 미사용으로 전송 보장)
+    if (p) {
+      console.log(`[socket] Chat saved & broadcasted: [${partyId}] ${msg}`);
+      io.emit("partyUpdated", { party: p });
+    }
   });
 
   socket.on("party:setChannel", (payload: any) => {
     const { partyId, channel } = payload;
     if (!partyId || !channel) return;
+    
     const p = STORE.getParty(partyId);
-    if (p) { p.channel = channel; p.updatedAt = Date.now(); io.emit("partyUpdated", { party: p }); broadcastParties(); }
+    if (p) {
+      p.channel = channel;
+      p.updatedAt = Date.now();
+      console.log(`[socket] Channel saved & broadcasted: [${partyId}] ${channel}`);
+      
+      // 모든 소켓에 공지
+      io.emit("partyUpdated", { party: p });
+      io.emit("partiesUpdated", { parties: STORE.listParties() });
+    }
   });
 
   socket.on("party:heartbeat", ({ partyId }: { partyId: string }) => {
