@@ -583,14 +583,22 @@ io.on("connection", (socket) => {
 
   socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {
     const u = requireSocketUser(socket);
-    if (!u) return;
+    const uid = u?.id || socketToUserId.get(socket.id);
+    
+    if (!uid) {
+      console.log(`[socket] setChannel failed: no user for socket ${socket.id}`);
+      return;
+    }
+    
     const { partyId, channel } = payload;
     if (!partyId || !channel) return;
 
     try {
-      STORE.setChannel({ partyId, userId: u.id, channel });
+      console.log(`[socket] setting channel for party ${partyId}: ${channel}`);
+      STORE.setChannel({ partyId, userId: uid, channel });
       broadcastParty(partyId);
-    } catch {
+    } catch (e) {
+      console.error(`[socket] setChannel error:`, e);
       socket.emit("queue:toast", { type: "error", message: "채널 설정 실패" });
     }
   });

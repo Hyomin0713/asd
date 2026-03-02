@@ -388,7 +388,14 @@ export default function Page() {
     sck.on("party:message", (payload: any) => {
       console.log("🔴🔴🔴 [socket] party:message RECEIVED", payload);
       
-      // 테스트를 위해 필터링을 잠시 해제 (서버에서 오기만 하면 무조건 출력)
+      // 메시지의 partyId가 현재 내가 속한 파티 ID와 일치할 때만 표시
+      // (서버에서 전역으로 쏘는 경우를 대비한 안전 장치)
+      const currentPid = partyId || safeLocalGet("mlq.partyId", "");
+      if (payload?.partyId && payload.partyId !== currentPid) {
+        console.log(`[socket] Ignored message from other party: ${payload.partyId}`);
+        return;
+      }
+
       if (payload?.msg) {
         setChatMessages(prev => {
           const next = [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-100);
