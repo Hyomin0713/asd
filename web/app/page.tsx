@@ -382,9 +382,13 @@ export default function Page() {
     });
 
     sck.on("party:message", (payload: any) => {
-      console.log("[socket] party:message", payload);
+      console.log("🔴🔴🔴 [socket] party:message RECEIVED", payload);
       if (payload?.msg) {
-        setChatMessages(prev => [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-50));
+        setChatMessages(prev => {
+          const next = [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-100);
+          console.log("🔴 [socket] Updated chatMessages state", next);
+          return next;
+        });
       }
     });
 
@@ -930,43 +934,48 @@ export default function Page() {
           />
         )}
         <section>
-          <div style={cardHeader}>
-            <div style={{ fontWeight: 900 }}>{selected?.name ?? "사냥터 선택"}</div>
-            <div style={muted}>{selected?.recommendedLevel ?? ""}</div>
-          </div>
+          {!partyId && (
+            <div style={cardHeader}>
+              <div style={{ fontWeight: 900 }}>{selected?.name ?? "사냥터 선택"}</div>
+              <div style={muted}>{selected?.recommendedLevel ?? ""}</div>
+            </div>
+          )}
           <div style={{ padding: 10, display: "grid", gap: 10 }}>
-            <div style={{ ...card, background: "rgba(0,0,0,0.20)", padding: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div><div style={{ fontWeight: 900, fontSize: 13 }}>정보</div><div style={muted}>{selected?.area ?? ""}</div></div>
-                <div style={{ textAlign: "right" }}><div style={{ fontWeight: 900, fontSize: 13 }}>현재 큐</div><div style={muted}>{queueCounts[selected?.id ?? ""] ?? 0}명</div></div>
-              </div>
-              <div style={{ ...muted, marginTop: 4, fontSize: 11 }}>{selected?.note ?? ""}</div>
-            </div>
-            <PublicPartyPanel
-              selectedName={selected?.name ?? null} selectedId={selected?.id ?? null} myPartyId={partyId || null}
-              parties={(selected?.name ? partiesForSelected : partyList) as any[]} onRefresh={refreshParties} onJoin={joinFromList}
-              isJoining={isJoining} card={card} muted={muted} btnSm={btnSm} listCard={listCard} pill={pill}
-            />
-            {partyId && (
-              <BuffTable
-                partyId={partyId} party={party} me={me} myBuffs={myBuffs} onChangeMyBuffs={setMyBuffs}
-                onPushMyBuffs={pushMyBuffs} onTransferOwner={transferOwner} fmtNumber={fmtNumber}
-                card={card} muted={muted} chip={chip} input={input}
-              />
-            )}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => startMatching()} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)", padding: "10px" }}>큐 참가</button>
-              <button onClick={() => { if (!isLoggedIn) { setToast({ type: "err", msg: "로그인 필요" }); return; } setCreatePartyOpen(true); }} style={{ ...btn, padding: "10px" }}>파티 만들기</button>
-            </div>
-
-            {partyId && (
-              <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>현재 자리 / 채널</div>
-                <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: channel ? "#74c0fc" : "#ff8787" }}>
-                  {channel || "채널 미설정"}
+            {!partyId ? (
+              <>
+                <div style={{ ...card, background: "rgba(0,0,0,0.20)", padding: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div><div style={{ fontWeight: 900, fontSize: 13 }}>정보</div><div style={muted}>{selected?.area ?? ""}</div></div>
+                    <div style={{ textAlign: "right" }}><div style={{ fontWeight: 900, fontSize: 13 }}>현재 큐</div><div style={muted}>{queueCounts[selected?.id ?? ""] ?? 0}명</div></div>
+                  </div>
+                  <div style={{ ...muted, marginTop: 4, fontSize: 11 }}>{selected?.note ?? ""}</div>
                 </div>
-                {!channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
-              </div>
+                <PublicPartyPanel
+                  selectedName={selected?.name ?? null} selectedId={selected?.id ?? null} myPartyId={partyId || null}
+                  parties={(selected?.name ? partiesForSelected : partyList) as any[]} onRefresh={refreshParties} onJoin={joinFromList}
+                  isJoining={isJoining} card={card} muted={muted} btnSm={btnSm} listCard={listCard} pill={pill}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => startMatching()} style={{ ...btn, flex: 1, background: "rgba(120,200,255,0.14)", padding: "10px" }}>큐 참가</button>
+                  <button onClick={() => { if (!isLoggedIn) { setToast({ type: "err", msg: "로그인 필요" }); return; } setCreatePartyOpen(true); }} style={{ ...btn, padding: "10px" }}>파티 만들기</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <BuffTable
+                  partyId={partyId} party={party} me={me} myBuffs={myBuffs} onChangeMyBuffs={setMyBuffs}
+                  onPushMyBuffs={pushMyBuffs} onTransferOwner={transferOwner} fmtNumber={fmtNumber}
+                  card={card} muted={muted} chip={chip} input={input}
+                />
+
+                <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>현재 자리 / 채널</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: channel ? "#74c0fc" : "#ff8787" }}>
+                    {channel || "채널 미설정"}
+                  </div>
+                  {!channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
+                </div>
+              </>
             )}
           </div>
         </section>

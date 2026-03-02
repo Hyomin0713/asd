@@ -595,9 +595,13 @@ io.on("connection", (socket) => {
     const chatPayload = { sender: finalSender, msg: msg.trim(), time: Date.now() };
     
     console.log(`[socket] CHAT_SUCCESS: [${partyId}] ${finalSender}: ${msg}`);
+    console.log(`[socket] Current Rooms:`, Array.from(socket.rooms));
     
-    // 방 전체에 전송
-    io.to(partyId).emit("party:message", chatPayload);
+    // 1. 본인에게 즉시 전송 (가장 확실함)
+    socket.emit("party:message", chatPayload);
+    
+    // 2. 파티원들에게 전송
+    socket.to(partyId).emit("party:message", chatPayload);
     
     // 혹시 방 전송이 실패할 경우를 대비해 본인에게 직접 전송
     // socket.emit("party:message", chatPayload); // io.to가 본인을 포함하므로 일단 주석 처리
