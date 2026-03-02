@@ -202,6 +202,11 @@ export default function Page() {
   const [createPassword, setCreatePassword] = useState("");
 
   const [partyList, setPartyList] = useState<any[]>([]);
+  // --- 렌더링 디버깅 로그 (콘솔에서 상태 확인용) ---
+  if (typeof window !== "undefined") {
+    // console.log(`[render] partyId="${partyId}", hasParty=${!!party}`);
+  }
+
   const [chatMessages, setChatMessages] = useState<{ sender: string; msg: string; time: number }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -397,9 +402,14 @@ export default function Page() {
       if (!payload?.party) return;
       console.log("[socket] ✅ PARTY_UPDATED RECEIVED:", payload.party);
       
-      // 내 파티 정보인지 한 번 더 확인하되, 로그는 무조건 남김
       const myPid = partyIdRef.current || safeLocalGet("mlq.partyId", "");
-      if (payload.party.id === myPid) {
+      
+      // 내 파티 정보라면 무조건 수용 및 상태 복구
+      if (payload.party.id === myPid || (!myPid && payload.party.members.some((m: any) => m.userId === me?.user?.id))) {
+        if (!partyIdRef.current) {
+          console.log("[socket] ⚠️ partyId was missing, recovering to:", payload.party.id);
+          updatePartyId(payload.party.id);
+        }
         setParty(payload.party);
         if (payload.party.channel) {
           setChannel(payload.party.channel);
@@ -884,7 +894,7 @@ export default function Page() {
                 </div>
               )}
 
-              {partyId && (
+              {(partyId || party) && (
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)" }}>파티 채팅</div>
                   <div ref={chatScrollRef} style={{ height: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, paddingRight: 4 }}>
@@ -892,7 +902,7 @@ export default function Page() {
                       <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>
                     )}
                     {party?.messages?.map((c: any, i: number) => (
-                      <div key={`${c.time}-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
+                      <div key={`msg-${c.time || i}-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
                         <span style={{ fontWeight: 800, color: "#74c0fc" }}>{c.sender}: </span>
                         <span style={{ color: "#e6e8ee" }}>{c.msg}</span>
                       </div>
@@ -965,7 +975,7 @@ export default function Page() {
             </div>
           )}
           <div style={{ padding: 10, display: "grid", gap: 10 }}>
-            {!partyId ? (
+            {!(partyId || party) ? (
               <>
                 <div style={{ ...card, background: "rgba(0,0,0,0.20)", padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -987,7 +997,7 @@ export default function Page() {
             ) : (
               <>
                 <BuffTable
-                  partyId={partyId} party={party} me={me} myBuffs={myBuffs} onChangeMyBuffs={setMyBuffs}
+                  partyId={partyId || party?.id} party={party} me={me} myBuffs={myBuffs} onChangeMyBuffs={setMyBuffs}
                   onPushMyBuffs={pushMyBuffs} onTransferOwner={transferOwner} fmtNumber={fmtNumber}
                   card={card} muted={muted} chip={chip} input={input}
                 />
