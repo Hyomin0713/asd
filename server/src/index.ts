@@ -168,6 +168,34 @@ function requireAuth(req: express.Request, res: express.Response): { user: Disco
   return { user: s.user, sessionId: s.sessionId };
 }
 
+app.post("/api/party/chat", (req, res) => {
+  const { partyId, sender, msg } = req.body;
+  if (!partyId || !msg) return res.status(400).json({ error: "MISSING_DATA" });
+  
+  const p = STORE.addMessage(partyId, sender || "익명", msg);
+  if (p) {
+    broadcastParty(partyId);
+    res.json({ ok: true });
+  } else {
+    res.status(404).json({ error: "PARTY_NOT_FOUND" });
+  }
+});
+
+app.post("/api/party/channel", (req, res) => {
+  const { partyId, channel } = req.body;
+  if (!partyId || !channel) return res.status(400).json({ error: "MISSING_DATA" });
+  
+  const p = STORE.getParty(partyId);
+  if (p) {
+    p.channel = channel;
+    p.updatedAt = Date.now();
+    broadcastParty(partyId);
+    res.json({ ok: true });
+  } else {
+    res.status(404).json({ error: "PARTY_NOT_FOUND" });
+  }
+});
+
 app.get("/health", (_req, res) => res.json({ ok: true, now: Date.now() }));
 
 app.get("/api/me", (req, res) => {
@@ -460,23 +488,23 @@ io.on("connection", (socket) => {
 
   socket.on("party:sendChat", (payload: any) => {
     const { partyId, sender, msg } = payload;
-    if (!partyId || !msg || !msg.trim()) return;
-    const chatPayload = { 
-      partyId,
-      sender: sender || "익명", 
-      msg: msg.trim(), 
-      time: Date.now() 
-    };
-    io.emit("party:message", chatPayload);
+    if (!msg || !msg.trim()) return;
+    const p = STORE.addMessage(partyId, sender || "익명", msg.trim());
+    if (p) {
+      io.emit("partyUpdated", { party: p });
+    }
   });
 
   socket.on("party:setChannel", (payload: any) => {
     const { partyId, channel } = payload;
     if (!partyId || !channel) return;
+    
     const p = STORE.getParty(partyId);
     if (p) {
       p.channel = channel;
       p.updatedAt = Date.now();
+      console.log(`[socket] CHANNEL UPDATED: [${partyId}] ${channel}`);
+      // 모든 인원에게 즉시 파티 업데이트 공지
       io.emit("partyUpdated", { party: p });
       broadcastParties();
     }

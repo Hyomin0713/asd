@@ -10,6 +10,8 @@ export type PartyMember = {
   lastSeenAt: number;
   buffs: Buffs;
 };
+export type PartyMessage = { sender: string; msg: string; time: number };
+
 export type Party = {
   id: string;
   title: string;
@@ -20,6 +22,7 @@ export type Party = {
   isLocked: boolean;
   lockPasswordHash: string | null;
   members: PartyMember[];
+  messages: PartyMessage[];
   createdAt: number;
   updatedAt: number;
 };
@@ -79,6 +82,7 @@ class PartyStore {
           buffs: { simbi: 0, ppeongbi: 0, syapbi: 0 }
         }
       ],
+      messages: [],
       createdAt: now,
       updatedAt: now
     };
@@ -288,8 +292,16 @@ class PartyStore {
   setChannel(args: { partyId: string; userId: string; channel: string }) {
     const p = this.getParty(args.partyId);
     if (!p) throw new Error("NOT_FOUND");
-    if (p.ownerId !== args.userId) throw new Error("NOT_OWNER");
     p.channel = args.channel;
+    p.updatedAt = Date.now();
+    return p;
+  }
+
+  addMessage(partyId: string, sender: string, msg: string) {
+    const p = this.getParty(partyId);
+    if (!p) return null;
+    p.messages.push({ sender, msg, time: Date.now() });
+    if (p.messages.length > 50) p.messages.shift();
     p.updatedAt = Date.now();
     return p;
   }

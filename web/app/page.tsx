@@ -341,15 +341,28 @@ export default function Page() {
     safeLocalSet("mlq.queueForm", { level, job, power, nickname, blacklist });
   }, [level, job, power, nickname, blacklist]);
 
-  const sendChat = () => {
-    const sck = socketRef.current;
+  const sendChat = async () => {
     const pid = partyIdRef.current;
-    if (!sck || !pid || !chatInput.trim()) return;
+    if (!pid || !chatInput.trim()) return;
     const finalSender = nickname.trim() || discordName || "익명";
-    const msgData = { partyId: pid, sender: finalSender, msg: chatInput.trim() };
-    console.log("[socket] emitting party:sendChat", msgData);
-    sck.emit("party:sendChat", msgData);
-    setChatInput("");
+    const msg = chatInput.trim();
+    setChatInput(""); 
+
+    try {
+      const sid = getSid();
+      const res = await fetch(apiUrl("/api/party/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(sid ? { "x-ml-session": sid } : {}) },
+        body: JSON.stringify({ partyId: pid, sender: finalSender, msg }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        setToast({ type: "err", msg: `채팅 전송 실패: ${err}` });
+      }
+    } catch (e: any) {
+      console.error("[chat] failed to send", e);
+      setToast({ type: "err", msg: "서버 연결 오류로 채팅을 보낼 수 없습니다." });
+    }
   };
 
   useEffect(() => {
@@ -388,31 +401,24 @@ export default function Page() {
 
     sck.on("partyUpdated", (payload: any) => {
       if (!payload?.party) return;
-      console.log("[socket] partyUpdated", payload.party);
+      console.log("[socket] partyUpdated received:", payload.party);
       setParty(payload.party);
+      // 서버에서 채널 정보가 오면 즉시 상태 반영
       if (payload.party.channel) {
         setChannel(payload.party.channel);
       }
     });
 
-    sck.onAny((event, ...args) => {
-      console.log(`📡 [socket] ANY EVENT: ${event}`, args);
-    });
-
     sck.on("party:message", (payload: any) => {
       console.log("🔴🔴🔴 [socket] party:message RECEIVED", payload);
       
-      const currentPid = partyIdRef.current;
-      if (payload?.partyId && payload.partyId !== currentPid) {
-        console.log(`[socket] Ignored message from other party: expected ${currentPid}, got ${payload.partyId}`);
-        return;
-      }
-
+      // 메시지가 존재하면 파티 ID 상관없이 일단 표시 (디버깅용)
       if (payload?.msg) {
-        setChatMessages(prev => {
-          const next = [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-100);
-          return next;
-        });
+        setChatMessages(prev => [...prev, { 
+          sender: payload.sender || "익명", 
+          msg: payload.msg, 
+          time: payload.time || Date.now() 
+        }].slice(-100));
       }
     });
 
@@ -680,19 +686,29 @@ export default function Page() {
   };
 
   function setChannelByLeader() {
-    const sck = socketRef.current;
-    if (!sck) return;
+    const pid = partyIdRef.current;
     const ch = `${channelLetter}-${channelNum}`;
-    const pid = partyId || safeLocalGet("mlq.partyId", "");
+    if (!pid) return;
 
-    console.log(`[socket] CONFIRMING CHANNEL: partyId=${pid}, channel=${ch}`);
-
-    if (pid) {
-      sck.emit("party:setChannel", { partyId: pid, channel: ch });
-    } else if (isLeader && matchState === "matched") {
-      sck.emit("queue:setChannel", { letter: channelLetter, num: channelNum });
-    }
-    setChannel("");
+    (async () => {
+      try {
+        const sid = getSid();
+        const res = await fetch(apiUrl("/api/party/channel"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(sid ? { "x-ml-session": sid } : {}) },
+          body: JSON.stringify({ partyId: pid, channel: ch }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          setToast({ type: "err", msg: `채널 설정 실패: ${err}` });
+        } else {
+          setToast({ type: "ok", msg: `채널이 ${ch}로 설정되었습니다.` });
+        }
+      } catch (e: any) {
+        console.error("[channel] failed to set", e);
+        setToast({ type: "err", msg: "서버 연결 오류로 채널을 설정할 수 없습니다." });
+      }
+    })();
   }
 
   function onSelectGround(id: string) {
@@ -890,13 +906,24 @@ export default function Page() {
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)" }}>파티 채팅</div>
                   <div ref={chatScrollRef} style={{ height: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, paddingRight: 4 }}>
-                    {chatMessages.length === 0 && <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>}
-                    {chatMessages.map((c, i) => (
-                      <div key={i} style={{ fontSize: 12, lineHeight: 1.4 }}>
+                    {((party?.messages || []).length === 0 && chatMessages.length === 0) && <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>}
+                    {(party?.messages || []).map((c: any, i: number) => (
+                      <div key={`p-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
                         <span style={{ fontWeight: 800, color: "#74c0fc" }}>{c.sender}: </span>
                         <span>{c.msg}</span>
                       </div>
                     ))}
+                    {/* 실시간 소켓 메시지 보완 (중복 방지 로직은 생략하거나 추후 보강) */}
+                    {chatMessages.map((c, i) => {
+                      // 이미 party.messages에 있는 메시지라면 스킵 (시간으로 대충 판별)
+                      if (party?.messages?.some((pm: any) => pm.time === c.time && pm.msg === c.msg)) return null;
+                      return (
+                        <div key={`s-${i}`} style={{ fontSize: 12, lineHeight: 1.4 }}>
+                          <span style={{ fontWeight: 800, color: "#74c0fc" }}>{c.sender}: </span>
+                          <span>{c.msg}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
                     <input 
@@ -994,10 +1021,9 @@ export default function Page() {
 
                 <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>현재 자리 / 채널</div>
-                  <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: channel ? "#74c0fc" : "#ff8787" }}>
-                    {channel || "채널 미설정"}
-                  </div>
-                  {!channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
+                  <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, color: (party?.channel || channel) ? "#74c0fc" : "#ff8787" }}>
+                    {party?.channel || channel || "채널 미설정"}
+                  </div>                  {!channel && isLeader && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>오른쪽 ‘채널 설정’에서 확정해주세요.</div>}
                 </div>
               </>
             )}
