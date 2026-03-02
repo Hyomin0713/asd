@@ -330,6 +330,7 @@ export default function Page() {
     const sck = socketRef.current;
     if (!sck || !partyId || !chatInput.trim()) return;
     const msgData = { partyId, sender: nickname || discordName, msg: chatInput.trim() };
+    console.log("[socket] emitting party:sendChat", msgData);
     sck.emit("party:sendChat", msgData);
     setChatInput("");
   };
@@ -349,15 +350,23 @@ export default function Page() {
 
     sck.on("queue:status", (p: QueueStatusPayload) => {
       if (!p) return;
+      console.log("[socket] queue:status", p);
       setMatchState(p.state);
       setChannel(p.channel ?? "");
       setIsLeader(!!p.isLeader);
       setChannelReady(!!p.channelReady);
-      setPartyId(p.partyId ?? "");
+      if (p.partyId) {
+        setPartyId(p.partyId);
+        safeLocalSet("mlq.partyId", p.partyId);
+      } else if (p.state === "idle") {
+        setPartyId("");
+        safeLocalSet("mlq.partyId", "");
+      }
     });
 
     sck.on("partyUpdated", (payload: any) => {
       if (!payload?.party) return;
+      console.log("[socket] partyUpdated", payload.party);
       setParty(payload.party);
       if (payload.party.channel) {
         setChannel(payload.party.channel);
@@ -365,6 +374,7 @@ export default function Page() {
     });
 
     sck.on("party:message", (payload: any) => {
+      console.log("[socket] party:message", payload);
       if (payload?.msg) {
         setChatMessages(prev => [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-50));
       }

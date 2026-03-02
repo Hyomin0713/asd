@@ -535,12 +535,13 @@ io.on("connection", (socket) => {
 
     const party = STORE.getParty(partyId);
     if (!party) {
-
+      console.log(`[socket] joinPartyRoom failed: party ${partyId} not found`);
       socket.emit("partyDeleted", { partyId });
       return;
     }
 
     socket.join(partyId);
+    console.log(`[socket] user joined party room: ${partyId}`);
 
     const u = requireSocketUser(socket);
     if (u) {
@@ -564,15 +565,26 @@ io.on("connection", (socket) => {
 
   socket.on("party:sendChat", (payload: { partyId: string; sender: string; msg: string }) => {
     const u = requireSocketUser(socket);
-    if (!u) return;
+    if (!u) {
+      console.log("[socket] party:sendChat failed: no user session");
+      return;
+    }
     const { partyId, sender, msg } = payload;
     if (!partyId || !msg.trim()) return;
 
     const p = STORE.getParty(partyId);
-    if (!p) return;
-    if (!p.members.some((m) => m.userId === u.id)) return;
+    if (!p) {
+      console.log(`[socket] party:sendChat failed: party ${partyId} not found`);
+      return;
+    }
+    if (!p.members.some((m) => m.userId === u.id)) {
+      console.log(`[socket] party:sendChat failed: user ${u.id} not in party ${partyId}`);
+      return;
+    }
 
-    io.to(partyId).emit("party:message", { sender: sender || u.global_name || u.username, msg: msg.trim() });
+    const finalSender = sender || u.global_name || u.username || "익명";
+    console.log(`[socket] chat in ${partyId}: [${finalSender}] ${msg}`);
+    io.in(partyId).emit("party:message", { sender: finalSender, msg: msg.trim() });
   });
 
   socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {
