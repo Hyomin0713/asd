@@ -765,7 +765,7 @@ export default function Page() {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             {isOwner && <span style={{ fontSize: 12 }} title="파티장">👑</span>}
-                            <span style={{ fontWeight: 800, fontSize: 13 }}>{m.name || m.displayName}</span>
+                            <span style={{ fontWeight: 800, fontSize: 13 }}>{m.name || m.displayName || "익명"}</span>
                           </div>
                           <div style={{ color: jobColor, fontWeight: 700, fontSize: 11 }}>Lv.{m.level} {m.job}</div>
                         </div>
@@ -797,9 +797,9 @@ export default function Page() {
                 </div>
               )}
 
-              {matchState === "matched" && (
+              {(matchState === "matched" || partyId) && (
                 <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ fontWeight: 900, fontSize: 14 }}>매칭완료!</div>
+                  {matchState === "matched" && <div style={{ fontWeight: 900, fontSize: 14 }}>매칭완료!</div>}
                   {channel ? (
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                       <div style={{ ...chip, padding: "2px 6px" }}>채널</div>
@@ -808,7 +808,7 @@ export default function Page() {
                     </div>
                   ) : <div style={{ ...muted, fontSize: 11 }}>채널 대기 중...</div>}
                   
-                  {isLeader && (
+                  {((matchState === "matched" && isLeader) || (party && me?.user?.id && party.ownerId === me.user.id)) && (
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 6 }}>
                       <div style={{ fontWeight: 800, fontSize: 12 }}>채널 설정 (파티장 전용)</div>
                       <div style={{ display: "flex", gap: 4 }}>
@@ -823,12 +823,14 @@ export default function Page() {
                     </div>
                   )}
 
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input style={{ ...input, flex: 1, padding: "6px 8px" }} placeholder="코드" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-                      <button style={btnSm} onClick={joinPartyByCode}>입장</button>
+                  {matchState === "matched" && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input style={{ ...input, flex: 1, padding: "6px 8px" }} placeholder="코드" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                        <button style={btnSm} onClick={joinPartyByCode}>입장</button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
