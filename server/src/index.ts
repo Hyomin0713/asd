@@ -564,25 +564,21 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("party:sendChat", (payload: { partyId: string; sender: string; msg: string }) => {
-    const { partyId, sender, msg } = payload;
-    if (!partyId || !msg || !msg.trim()) return;
-
-    const u = requireSocketUser(socket);
-    const uid = u?.id || socketToUserId.get(socket.id);
-    const finalSender = sender || (u ? (u.global_name || u.username) : "익명");
-    
+  socket.on("party:sendChat", (payload: any) => {
+    // 보안/검증을 모두 생략하고 즉시 전역 브로드캐스트 (최우선 작동 보장)
     const chatPayload = { 
-      partyId, // 클라이언트에서 필터링용
-      sender: finalSender, 
-      msg: msg.trim(), 
+      partyId: payload.partyId,
+      sender: payload.sender || "익명", 
+      msg: (payload.msg || "").trim(), 
       time: Date.now() 
     };
     
-    console.log(`[socket] BROADCASTING CHAT: [${partyId}] ${finalSender}: ${msg}`);
+    console.log(`[socket] FORCE BROADCAST:`, chatPayload);
     
-    // 룸 기능을 거치지 않고 전역으로 발송 (가장 확실함)
+    // 1. 전역 모든 소켓에 전송
     io.emit("party:message", chatPayload);
+    // 2. 혹시 모를 누락을 위해 보완 전송
+    socket.broadcast.emit("party:message", chatPayload);
   });
 
   socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {

@@ -388,17 +388,10 @@ export default function Page() {
     sck.on("party:message", (payload: any) => {
       console.log("🔴🔴🔴 [socket] party:message RECEIVED", payload);
       
-      // 전역 메시지 중 본인 파티의 메시지만 걸러내기
-      // Note: partyId는 useState 상태이므로 렌더링 시점에 참조 가능
-      if (payload?.partyId && payload.partyId !== partyId) {
-        console.log(`[socket] Ignored message from other party: ${payload.partyId}`);
-        return;
-      }
-
+      // 테스트를 위해 필터링을 잠시 해제 (서버에서 오기만 하면 무조건 출력)
       if (payload?.msg) {
         setChatMessages(prev => {
           const next = [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-100);
-          console.log("🔴 [socket] Updated chatMessages state", next);
           return next;
         });
       }
