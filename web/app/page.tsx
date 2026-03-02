@@ -359,11 +359,14 @@ export default function Page() {
     sck.on("partyUpdated", (payload: any) => {
       if (!payload?.party) return;
       setParty(payload.party);
+      if (payload.party.channel) {
+        setChannel(payload.party.channel);
+      }
     });
 
     sck.on("party:message", (payload: any) => {
-      if (payload?.sender && payload?.msg) {
-        setChatMessages(prev => [...prev, { sender: payload.sender, msg: payload.msg, time: Date.now() }].slice(-50));
+      if (payload?.msg) {
+        setChatMessages(prev => [...prev, { sender: payload.sender || "익명", msg: payload.msg, time: Date.now() }].slice(-50));
       }
     });
 
