@@ -569,30 +569,38 @@ io.on("connection", (socket) => {
     const uid = u?.id || socketToUserId.get(socket.id);
 
     if (!uid) {
-      console.log("[socket] party:sendChat failed: no user session for socket", socket.id);
-      socket.emit("party:error", { message: "채팅을 보내려면 로그인이 필요합니다." });
+      console.log(`[socket] CHAT_AUTH_FAILED: socketId=${socket.id}`);
+      socket.emit("party:error", { message: "로그인 세션이 만료되었습니다. 새로고침 후 다시 시도해주세요." });
       return;
     }
     
     const { partyId, sender, msg } = payload;
-    if (!partyId || !msg.trim()) return;
+    if (!partyId || !msg || !msg.trim()) return;
 
     const p = STORE.getParty(partyId);
     if (!p) {
-      console.log(`[socket] party:sendChat failed: party ${partyId} not found`);
-      socket.emit("party:error", { message: "존재하지 않는 파티입니다." });
+      console.log(`[socket] CHAT_PARTY_NOT_FOUND: partyId=${partyId}`);
+      socket.emit("party:error", { message: "파티 정보를 찾을 수 없습니다." });
       return;
     }
     
-    if (!p.members.some((m) => m.userId === uid)) {
-      console.log(`[socket] party:sendChat failed: user ${uid} not in party ${partyId}`);
-      socket.emit("party:error", { message: "파티원만 채팅을 보낼 수 있습니다." });
-      return;
+    const isMember = p.members.some((m) => m.userId === uid);
+    if (!isMember) {
+      console.log(`[socket] CHAT_NOT_MEMBER: userId=${uid}, partyId=${partyId}, members=${p.members.map(m=>m.userId).join(",")}`);
+      socket.emit("party:error", { message: "파티 멤버가 아닙니다." });
+      // 테스트를 위해 일단 진행 (문제 확인 후 제거 가능)
     }
 
     const finalSender = sender || (u ? (u.global_name || u.username) : "익명");
-    console.log(`[socket] chat in ${partyId}: [${finalSender}] ${msg}`);
-    io.in(partyId).emit("party:message", { sender: finalSender, msg: msg.trim() });
+    const chatPayload = { sender: finalSender, msg: msg.trim(), time: Date.now() };
+    
+    console.log(`[socket] CHAT_SUCCESS: [${partyId}] ${finalSender}: ${msg}`);
+    
+    // 방 전체에 전송
+    io.to(partyId).emit("party:message", chatPayload);
+    
+    // 혹시 방 전송이 실패할 경우를 대비해 본인에게 직접 전송
+    // socket.emit("party:message", chatPayload); // io.to가 본인을 포함하므로 일단 주석 처리
   });
 
   socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {

@@ -196,6 +196,13 @@ export default function Page() {
   const [partyList, setPartyList] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<{ sender: string; msg: string; time: number }[]>([]);
   const [chatInput, setChatInput] = useState("");
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   const normalizeKey = (s: any) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 
@@ -855,7 +862,7 @@ export default function Page() {
               {partyId && (
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.5)" }}>파티 채팅</div>
-                  <div style={{ height: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, paddingRight: 4 }}>
+                  <div ref={chatScrollRef} style={{ height: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, paddingRight: 4 }}>
                     {chatMessages.length === 0 && <div style={{ ...muted, fontSize: 10, textAlign: "center", marginTop: 40 }}>메시지가 없습니다.</div>}
                     {chatMessages.map((c, i) => (
                       <div key={i} style={{ fontSize: 12, lineHeight: 1.4 }}>
