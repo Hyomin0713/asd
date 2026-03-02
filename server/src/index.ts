@@ -565,46 +565,24 @@ io.on("connection", (socket) => {
   });
 
   socket.on("party:sendChat", (payload: { partyId: string; sender: string; msg: string }) => {
-    const u = requireSocketUser(socket);
-    const uid = u?.id || socketToUserId.get(socket.id);
-
-    if (!uid) {
-      console.log(`[socket] CHAT_AUTH_FAILED: socketId=${socket.id}`);
-      socket.emit("party:error", { message: "로그인 세션이 만료되었습니다. 새로고침 후 다시 시도해주세요." });
-      return;
-    }
-    
     const { partyId, sender, msg } = payload;
     if (!partyId || !msg || !msg.trim()) return;
 
-    const p = STORE.getParty(partyId);
-    if (!p) {
-      console.log(`[socket] CHAT_PARTY_NOT_FOUND: partyId=${partyId}`);
-      socket.emit("party:error", { message: "파티 정보를 찾을 수 없습니다." });
-      return;
-    }
-    
-    const isMember = p.members.some((m) => m.userId === uid);
-    if (!isMember) {
-      console.log(`[socket] CHAT_NOT_MEMBER: userId=${uid}, partyId=${partyId}, members=${p.members.map(m=>m.userId).join(",")}`);
-      socket.emit("party:error", { message: "파티 멤버가 아닙니다." });
-      // 테스트를 위해 일단 진행 (문제 확인 후 제거 가능)
-    }
-
+    const u = requireSocketUser(socket);
+    const uid = u?.id || socketToUserId.get(socket.id);
     const finalSender = sender || (u ? (u.global_name || u.username) : "익명");
-    const chatPayload = { sender: finalSender, msg: msg.trim(), time: Date.now() };
     
-    console.log(`[socket] CHAT_SUCCESS: [${partyId}] ${finalSender}: ${msg}`);
-    console.log(`[socket] Current Rooms:`, Array.from(socket.rooms));
+    const chatPayload = { 
+      partyId, // 클라이언트에서 필터링용
+      sender: finalSender, 
+      msg: msg.trim(), 
+      time: Date.now() 
+    };
     
-    // 1. 본인에게 즉시 전송 (가장 확실함)
-    socket.emit("party:message", chatPayload);
+    console.log(`[socket] BROADCASTING CHAT: [${partyId}] ${finalSender}: ${msg}`);
     
-    // 2. 파티원들에게 전송
-    socket.to(partyId).emit("party:message", chatPayload);
-    
-    // 혹시 방 전송이 실패할 경우를 대비해 본인에게 직접 전송
-    // socket.emit("party:message", chatPayload); // io.to가 본인을 포함하므로 일단 주석 처리
+    // 룸 기능을 거치지 않고 전역으로 발송 (가장 확실함)
+    io.emit("party:message", chatPayload);
   });
 
   socket.on("party:setChannel", (payload: { partyId: string; channel: string }) => {
